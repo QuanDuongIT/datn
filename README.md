@@ -1,149 +1,407 @@
-# VITS2: Improving Quality and Efficiency of Single-Stage Text-to-Speech with Adversarial Learning and Architecture Design
-### Jungil Kong, Jihoon Park, Beomjeong Kim, Jeongmin Kim, Dohee Kong, Sangjin Kim 
-Unofficial implementation of the [VITS2 paper](https://arxiv.org/abs/2307.16430), sequel to [VITS paper](https://arxiv.org/abs/2106.06103). (thanks to the authors for their work!)
 
-![Alt text](resources/image.png)
+## 🐸Coqui.ai News
+- 📣 ⓍTTSv2 is here with 16 languages and better performance across the board.
+- 📣 ⓍTTS fine-tuning code is out. Check the [example recipes](https://github.com/coqui-ai/TTS/tree/dev/recipes/ljspeech).
+- 📣 ⓍTTS can now stream with <200ms latency.
+- 📣 ⓍTTS, our production TTS model that can speak 13 languages, is released [Blog Post](https://coqui.ai/blog/tts/open_xtts), [Demo](https://huggingface.co/spaces/coqui/xtts), [Docs](https://tts.readthedocs.io/en/dev/models/xtts.html)
+- 📣 [🐶Bark](https://github.com/suno-ai/bark) is now available for inference with unconstrained voice cloning. [Docs](https://tts.readthedocs.io/en/dev/models/bark.html)
+- 📣 You can use [~1100 Fairseq models](https://github.com/facebookresearch/fairseq/tree/main/examples/mms) with 🐸TTS.
+- 📣 🐸TTS now supports 🐢Tortoise with faster inference. [Docs](https://tts.readthedocs.io/en/dev/models/tortoise.html)
 
-Single-stage text-to-speech models have been actively studied recently, and their results have outperformed two-stage pipeline systems. Although the previous single-stage model has made great progress, there is room for improvement in terms of its intermittent unnaturalness, computational efficiency, and strong dependence on phoneme conversion. In this work, we introduce VITS2, a single-stage text-to-speech model that efficiently synthesizes a more natural speech by improving several aspects of the previous work. We propose improved structures and training mechanisms and present that the proposed methods are effective in improving naturalness, similarity of speech characteristics in a multi-speaker model, and efficiency of training and inference. Furthermore, we demonstrate that the strong dependence on phoneme conversion in previous works can be significantly reduced with our method, which allows a fully end-toend single-stage approach.
+<div align="center">
+<img src="https://static.scarf.sh/a.png?x-pxid=cf317fe7-2188-4721-bc01-124bb5d5dbb2" />
 
-## Credits
-- We will build this repo based on the [VITS repo](https://github.com/jaywalnut310/vits). The goal is to make this model easier to transfer learning from VITS pretrained model!
-- (08-17-2023) - The authors were really kind to guide me through the paper and answer my questions. I am open to discuss any changes or answer questions regarding the implementation. Please feel free to open an issue or contact me directly.
+## <img src="https://raw.githubusercontent.com/coqui-ai/TTS/main/images/coqui-log-green-TTS.png" height="56"/>
 
-# Pretrained checkpoints
-- [LJSpeech-no-sdp](https://drive.google.com/drive/folders/1U-1EqBMXqmEqK0aUhbCJOquowbvKkLmc?usp=sharing) (refer to config.yaml in this checkppoint folder) | 64k steps | proof that training works!
-Would recommend experts to rename the ckpts to *_0.pth and starting the training using transfer learning. (I will add a notebook for this soon to help beginers).
-- [x] Check 'Discussion' page for training logs and tensorboard links and other community contributions.
 
-# Sample audio
-- Russian trained model samples [#32](https://github.com/p0p4k/vits2_pytorch/discussions/32). Thanks to [@shigabeev](https://github.com/shigabeev) for sharing the samples.
-- Some samples on non-native EN dataset [discussion page](https://github.com/p0p4k/vits2_pytorch/discussions/18). Thanks to [@athenasaurav](https://github.com/athenasaurav) for using his private GPU resources and dataset!
-- Added sample audio @104k steps. [ljspeech-nosdp](resources/test.wav) ; [tensorboard](https://github.com/p0p4k/vits2_pytorch/discussions/12)
-- [vietnamese samples](https://github.com/p0p4k/vits2_pytorch/pull/10#issuecomment-1682307529) Thanks to [@ductho9799](https://github.com/ductho9799) for sharing!
+**🐸TTS is a library for advanced Text-to-Speech generation.**
 
-## Prerequisites
-1. Python >= 3.10
-2. Tested on Pytorch version 1.13.1 with Google Colab and LambdaLabs cloud.
-3. Clone this repository
-4. Install python requirements. Please refer [requirements.txt](requirements.txt)
-    1. You may need to install espeak first: `apt-get install espeak`
-5. Download datasets
-    1. Download and extract the LJ Speech dataset, then rename or create a link to the dataset folder: `ln -s /path/to/LJSpeech-1.1/wavs DUMMY1`
-    1. For mult-speaker setting, download and extract the VCTK dataset, and downsample wav files to 22050 Hz. Then rename or create a link to the dataset folder: `ln -s /path/to/VCTK-Corpus/downsampled_wavs DUMMY2`
-6. Build Monotonic Alignment Search and run preprocessing if you use your own datasets.
+🚀 Pretrained models in +1100 languages.
 
-```sh
-# Cython-version Monotonoic Alignment Search
-cd monotonic_align
-python setup.py build_ext --inplace
+🛠️ Tools for training new models and fine-tuning existing models in any language.
 
-# Preprocessing (g2p) for your own datasets. Preprocessed phonemes for LJ Speech and VCTK have been already provided.
-# python preprocess.py --text_index 1 --filelists filelists/ljs_audio_text_train_filelist.txt filelists/ljs_audio_text_val_filelist.txt filelists/ljs_audio_text_test_filelist.txt 
-# python preprocess.py --text_index 2 --filelists filelists/vctk_audio_sid_text_train_filelist.txt filelists/vctk_audio_sid_text_val_filelist.txt filelists/vctk_audio_sid_text_test_filelist.txt
+📚 Utilities for dataset analysis and curation.
+______________________________________________________________________
+
+[![Discord](https://img.shields.io/discord/1037326658807533628?color=%239B59B6&label=chat%20on%20discord)](https://discord.gg/5eXr5seRrv)
+[![License](<https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg>)](https://opensource.org/licenses/MPL-2.0)
+[![PyPI version](https://badge.fury.io/py/TTS.svg)](https://badge.fury.io/py/TTS)
+[![Covenant](https://camo.githubusercontent.com/7d620efaa3eac1c5b060ece5d6aacfcc8b81a74a04d05cd0398689c01c4463bb/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f436f6e7472696275746f72253230436f76656e616e742d76322e3025323061646f707465642d6666363962342e737667)](https://github.com/coqui-ai/TTS/blob/master/CODE_OF_CONDUCT.md)
+[![Downloads](https://pepy.tech/badge/tts)](https://pepy.tech/project/tts)
+[![DOI](https://zenodo.org/badge/265612440.svg)](https://zenodo.org/badge/latestdoi/265612440)
+
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/aux_tests.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/data_tests.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/docker.yaml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/inference_tests.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/style_check.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/text_tests.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/tts_tests.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/vocoder_tests.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/zoo_tests0.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/zoo_tests1.yml/badge.svg)
+![GithubActions](https://github.com/coqui-ai/TTS/actions/workflows/zoo_tests2.yml/badge.svg)
+[![Docs](<https://readthedocs.org/projects/tts/badge/?version=latest&style=plastic>)](https://tts.readthedocs.io/en/latest/)
+
+</div>
+
+______________________________________________________________________
+
+## 💬 Where to ask questions
+Please use our dedicated channels for questions and discussion. Help is much more valuable if it's shared publicly so that more people can benefit from it.
+
+| Type                            | Platforms                               |
+| ------------------------------- | --------------------------------------- |
+| 🚨 **Bug Reports**              | [GitHub Issue Tracker]                  |
+| 🎁 **Feature Requests & Ideas** | [GitHub Issue Tracker]                  |
+| 👩‍💻 **Usage Questions**          | [GitHub Discussions]                    |
+| 🗯 **General Discussion**       | [GitHub Discussions] or [Discord]   |
+
+[github issue tracker]: https://github.com/coqui-ai/tts/issues
+[github discussions]: https://github.com/coqui-ai/TTS/discussions
+[discord]: https://discord.gg/5eXr5seRrv
+[Tutorials and Examples]: https://github.com/coqui-ai/TTS/wiki/TTS-Notebooks-and-Tutorials
+
+
+## 🔗 Links and Resources
+| Type                            | Links                               |
+| ------------------------------- | --------------------------------------- |
+| 💼 **Documentation**              | [ReadTheDocs](https://tts.readthedocs.io/en/latest/)
+| 💾 **Installation**               | [TTS/README.md](https://github.com/coqui-ai/TTS/tree/dev#installation)|
+| 👩‍💻 **Contributing**               | [CONTRIBUTING.md](https://github.com/coqui-ai/TTS/blob/main/CONTRIBUTING.md)|
+| 📌 **Road Map**                   | [Main Development Plans](https://github.com/coqui-ai/TTS/issues/378)
+| 🚀 **Released Models**            | [TTS Releases](https://github.com/coqui-ai/TTS/releases) and [Experimental Models](https://github.com/coqui-ai/TTS/wiki/Experimental-Released-Models)|
+| 📰 **Papers**                    | [TTS Papers](https://github.com/erogol/TTS-papers)|
+
+
+## 🥇 TTS Performance
+<p align="center"><img src="https://raw.githubusercontent.com/coqui-ai/TTS/main/images/TTS-performance.png" width="800" /></p>
+
+Underlined "TTS*" and "Judy*" are **internal** 🐸TTS models that are not released open-source. They are here to show the potential. Models prefixed with a dot (.Jofish .Abe and .Janice) are real human voices.
+
+## Features
+- High-performance Deep Learning models for Text2Speech tasks.
+    - Text2Spec models (Tacotron, Tacotron2, Glow-TTS, SpeedySpeech).
+    - Speaker Encoder to compute speaker embeddings efficiently.
+    - Vocoder models (MelGAN, Multiband-MelGAN, GAN-TTS, ParallelWaveGAN, WaveGrad, WaveRNN)
+- Fast and efficient model training.
+- Detailed training logs on the terminal and Tensorboard.
+- Support for Multi-speaker TTS.
+- Efficient, flexible, lightweight but feature complete `Trainer API`.
+- Released and ready-to-use models.
+- Tools to curate Text2Speech datasets under```dataset_analysis```.
+- Utilities to use and test your models.
+- Modular (but not too much) code base enabling easy implementation of new ideas.
+
+## Model Implementations
+### Spectrogram models
+- Tacotron: [paper](https://arxiv.org/abs/1703.10135)
+- Tacotron2: [paper](https://arxiv.org/abs/1712.05884)
+- Glow-TTS: [paper](https://arxiv.org/abs/2005.11129)
+- Speedy-Speech: [paper](https://arxiv.org/abs/2008.03802)
+- Align-TTS: [paper](https://arxiv.org/abs/2003.01950)
+- FastPitch: [paper](https://arxiv.org/pdf/2006.06873.pdf)
+- FastSpeech: [paper](https://arxiv.org/abs/1905.09263)
+- FastSpeech2: [paper](https://arxiv.org/abs/2006.04558)
+- SC-GlowTTS: [paper](https://arxiv.org/abs/2104.05557)
+- Capacitron: [paper](https://arxiv.org/abs/1906.03402)
+- OverFlow: [paper](https://arxiv.org/abs/2211.06892)
+- Neural HMM TTS: [paper](https://arxiv.org/abs/2108.13320)
+- Delightful TTS: [paper](https://arxiv.org/abs/2110.12612)
+
+### End-to-End Models
+- ⓍTTS: [blog](https://coqui.ai/blog/tts/open_xtts)
+- VITS: [paper](https://arxiv.org/pdf/2106.06103)
+- 🐸 YourTTS: [paper](https://arxiv.org/abs/2112.02418)
+- 🐢 Tortoise: [orig. repo](https://github.com/neonbjb/tortoise-tts)
+- 🐶 Bark: [orig. repo](https://github.com/suno-ai/bark)
+
+### Attention Methods
+- Guided Attention: [paper](https://arxiv.org/abs/1710.08969)
+- Forward Backward Decoding: [paper](https://arxiv.org/abs/1907.09006)
+- Graves Attention: [paper](https://arxiv.org/abs/1910.10288)
+- Double Decoder Consistency: [blog](https://erogol.com/solving-attention-problems-of-tts-models-with-double-decoder-consistency/)
+- Dynamic Convolutional Attention: [paper](https://arxiv.org/pdf/1910.10288.pdf)
+- Alignment Network: [paper](https://arxiv.org/abs/2108.10447)
+
+### Speaker Encoder
+- GE2E: [paper](https://arxiv.org/abs/1710.10467)
+- Angular Loss: [paper](https://arxiv.org/pdf/2003.11982.pdf)
+
+### Vocoders
+- MelGAN: [paper](https://arxiv.org/abs/1910.06711)
+- MultiBandMelGAN: [paper](https://arxiv.org/abs/2005.05106)
+- ParallelWaveGAN: [paper](https://arxiv.org/abs/1910.11480)
+- GAN-TTS discriminators: [paper](https://arxiv.org/abs/1909.11646)
+- WaveRNN: [origin](https://github.com/fatchord/WaveRNN/)
+- WaveGrad: [paper](https://arxiv.org/abs/2009.00713)
+- HiFiGAN: [paper](https://arxiv.org/abs/2010.05646)
+- UnivNet: [paper](https://arxiv.org/abs/2106.07889)
+
+### Voice Conversion
+- FreeVC: [paper](https://arxiv.org/abs/2210.15418)
+
+You can also help us implement more models.
+
+## Installation
+🐸TTS is tested on Ubuntu 18.04 with **python >= 3.9, < 3.12.**.
+
+If you are only interested in [synthesizing speech](https://tts.readthedocs.io/en/latest/inference.html) with the released 🐸TTS models, installing from PyPI is the easiest option.
+
+```bash
+pip install TTS
 ```
 
-## How to run (dry-run)
-- model forward pass (dry-run)
+If you plan to code or train models, clone 🐸TTS and install it locally.
+
+```bash
+git clone https://github.com/coqui-ai/TTS
+pip install -e .[all,dev,notebooks]  # Select the relevant extras
+```
+
+If you are on Ubuntu (Debian), you can also run following commands for installation.
+
+```bash
+$ make system-deps  # intended to be used on Ubuntu (Debian). Let us know if you have a different OS.
+$ make install
+```
+
+If you are on Windows, 👑@GuyPaddock wrote installation instructions [here](https://stackoverflow.com/questions/66726331/how-can-i-run-mozilla-tts-coqui-tts-training-with-cuda-on-a-windows-system).
+
+
+## Docker Image
+You can also try TTS without install with the docker image.
+Simply run the following command and you will be able to run TTS without installing it.
+
+```bash
+docker run --rm -it -p 5002:5002 --entrypoint /bin/bash ghcr.io/coqui-ai/tts-cpu
+python3 TTS/server/server.py --list_models #To get the list of available models
+python3 TTS/server/server.py --model_name tts_models/en/vctk/vits # To start a server
+```
+
+You can then enjoy the TTS server [here](http://[::1]:5002/)
+More details about the docker images (like GPU support) can be found [here](https://tts.readthedocs.io/en/latest/docker_images.html)
+
+
+## Synthesizing speech by 🐸TTS
+
+### 🐍 Python API
+
+#### Running a multi-speaker and multi-lingual model
+
 ```python
 import torch
-from models import SynthesizerTrn
+from TTS.api import TTS
 
-net_g = SynthesizerTrn(
-    n_vocab=256,
-    spec_channels=80, # <--- vits2 parameter (changed from 513 to 80)
-    segment_size=8192,
-    inter_channels=192,
-    hidden_channels=192,
-    filter_channels=768,
-    n_heads=2,
-    n_layers=6,
-    kernel_size=3,
-    p_dropout=0.1,
-    resblock="1", 
-    resblock_kernel_sizes=[3, 7, 11],
-    resblock_dilation_sizes=[[1, 3, 5], [1, 3, 5], [1, 3, 5]],
-    upsample_rates=[8, 8, 2, 2],
-    upsample_initial_channel=512,
-    upsample_kernel_sizes=[16, 16, 4, 4],
-    n_speakers=0,
-    gin_channels=0,
-    use_sdp=True, 
-    use_transformer_flows=True, # <--- vits2 parameter
-    # (choose from "pre_conv", "fft", "mono_layer_inter_residual", "mono_layer_post_residual")
-    transformer_flow_type="fft", # <--- vits2 parameter 
-    use_spk_conditioned_encoder=True, # <--- vits2 parameter
-    use_noise_scaled_mas=True, # <--- vits2 parameter
-    use_duration_discriminator=True, # <--- vits2 parameter
-)
+# Get device
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-x = torch.LongTensor([[1, 2, 3],[4, 5, 6]]) # token ids
-x_lengths = torch.LongTensor([3, 2]) # token lengths
-y = torch.randn(2, 80, 100) # mel spectrograms
-y_lengths = torch.Tensor([100, 80]) # mel spectrogram lengths
+# List available 🐸TTS models
+print(TTS().list_models())
 
-net_g(
-    x=x,
-    x_lengths=x_lengths,
-    y=y,
-    y_lengths=y_lengths,
-)
+# Init TTS
+tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
-# calculate loss and backpropagate
+# Run TTS
+# ❗ Since this model is multi-lingual voice cloning model, we must set the target speaker_wav and language
+# Text to speech list of amplitude values as output
+wav = tts.tts(text="Hello world!", speaker_wav="my/cloning/audio.wav", language="en")
+# Text to speech to a file
+tts.tts_to_file(text="Hello world!", speaker_wav="my/cloning/audio.wav", language="en", file_path="output.wav")
 ```
 
-## Training Example
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12iCPWMpKdekM6F1HujYCh5H8PyzrgJN2?usp=sharing)
-```sh
-# LJ Speech
-python train.py -c configs/vits2_ljs_nosdp.json -m ljs_base # no-sdp; (recommended)
-python train.py -c configs/vits2_ljs_base.json -m ljs_base # with sdp;
+#### Running a single speaker model
 
-# VCTK
-python train_ms.py -c configs/vits2_vctk_base.json -m vctk_base
+```python
+# Init TTS with the target model name
+tts = TTS(model_name="tts_models/de/thorsten/tacotron2-DDC", progress_bar=False).to(device)
 
-# for onnx export of trained models
-python export_onnx.py --model-path="G_64000.pth" --config-path="config.json" --output="vits2.onnx"
-python infer_onnx.py --model="vits2.onnx" --config-path="config.json" --output-wav-path="output.wav" --text="hello world, how are you?"
+# Run TTS
+tts.tts_to_file(text="Ich bin eine Testnachricht.", file_path=OUTPUT_PATH)
+
+# Example voice cloning with YourTTS in English, French and Portuguese
+tts = TTS(model_name="tts_models/multilingual/multi-dataset/your_tts", progress_bar=False).to(device)
+tts.tts_to_file("This is voice cloning.", speaker_wav="my/cloning/audio.wav", language="en", file_path="output.wav")
+tts.tts_to_file("C'est le clonage de la voix.", speaker_wav="my/cloning/audio.wav", language="fr-fr", file_path="output.wav")
+tts.tts_to_file("Isso é clonagem de voz.", speaker_wav="my/cloning/audio.wav", language="pt-br", file_path="output.wav")
 ```
 
-## TODOs, features and notes
+#### Example voice conversion
 
-#### Duration predictor (fig 1a) 
-- [x] Added LSTM discriminator to duration predictor.
-- [x] Added adversarial loss to duration predictor. ("use_duration_discriminator" flag in config file; default is "True")
-- [x] Monotonic Alignment Search with Gaussian Noise added; might need expert verification (Section 2.2)
-- [x] Added "use_noise_scaled_mas" flag in config file. Choose from True or False; updates noise while training based on number of steps and never goes below 0.0
-- [x] Update models.py/train.py/train_ms.py
-- [x] Update config files (vits2_vctk_base.json; vits2_ljs_base.json)
-- [x] Update losses in train.py and train_ms.py
-#### Transformer block in the normalizing flow (fig 1b)
-- [x] Added transformer block to the normalizing flow. There are three types of transformer blocks: pre-convolution (my implementation), FFT (from [so-vits-svc](https://github.com/svc-develop-team/so-vits-svc/commit/fc8336fffd40c39bdb225c1b041ab4dd15fac4e9) repo) and mono-layer.
-- [x] Added "transformer_flow_type" flag in config file. Choose from "pre_conv", "fft", "mono_layer_inter_residual", "mono_layer_post_residual".
-- [x] Added layers and blocks in models.py 
-(ResidualCouplingTransformersLayer, 
-ResidualCouplingTransformersBlock,
-FFTransformerCouplingLayer,
-MonoTransformerFlowLayer)
-- [x] Add in config file (vits2_ljs_base.json; can be turned on using "use_transformer_flows" flag)
-#### Speaker-conditioned text encoder (fig 1c)
-- [x] Added speaker embedding to the text encoder in models.py (TextEncoder; backward compatible with VITS)
-- [x] Add in config file (vits2_ljs_base.json; can be turned on using "use_spk_conditioned_encoder" flag)
-#### Mel spectrogram posterior encoder (Section 3)
-- [x] Added mel spectrogram posterior encoder in train.py 
-- [x] Addded new config file (vits2_ljs_base.json; can be turned on using "use_mel_posterior_encoder" flag)
-- [x] Updated 'data_utils.py' to use the "use_mel_posterior_encoder" flag for vits2
-#### Training scripts
-- [x] Added vits2 flags to train.py (single-speaer model)
-- [x] Added vits2 flags to train_ms.py (multi-speaker model)
-#### ONNX export
-- [x] Add ONNX export support. 
-#### Gradio Demo
-- [x] Add Gradio demo support.
-  
-## Special mentions
-- [@erogol](https://github.com/erogol) for quick feedback and guidance. (Please check his awesome [CoquiTTS](https://github.com/coqui-ai/TTS) repo).
-- [@lexkoro](https://github.com/lexkoro) for discussions and help with the prototype training.
-- [@manmay-nakhashi](https://github.com/manmay-nakhashi) for discussions and help with the code.
-- [@athenasaurav](https://github.com/athenasaurav) for offering GPU support for training.
-- [@w11wo](https://github.com/w11wo) for ONNX support.
-- [@Subarasheese](https://github.com/Subarasheese) for Gradio UI.
+Converting the voice in `source_wav` to the voice of `target_wav`
+
+```python
+tts = TTS(model_name="voice_conversion_models/multilingual/vctk/freevc24", progress_bar=False).to("cuda")
+tts.voice_conversion_to_file(source_wav="my/source.wav", target_wav="my/target.wav", file_path="output.wav")
+```
+
+#### Example voice cloning together with the voice conversion model.
+This way, you can clone voices by using any model in 🐸TTS.
+
+```python
+
+tts = TTS("tts_models/de/thorsten/tacotron2-DDC")
+tts.tts_with_vc_to_file(
+    "Wie sage ich auf Italienisch, dass ich dich liebe?",
+    speaker_wav="target/speaker.wav",
+    file_path="output.wav"
+)
+```
+
+#### Example text to speech using **Fairseq models in ~1100 languages** 🤯.
+For Fairseq models, use the following name format: `tts_models/<lang-iso_code>/fairseq/vits`.
+You can find the language ISO codes [here](https://dl.fbaipublicfiles.com/mms/tts/all-tts-languages.html)
+and learn about the Fairseq models [here](https://github.com/facebookresearch/fairseq/tree/main/examples/mms).
+
+```python
+# TTS with on the fly voice conversion
+api = TTS("tts_models/deu/fairseq/vits")
+api.tts_with_vc_to_file(
+    "Wie sage ich auf Italienisch, dass ich dich liebe?",
+    speaker_wav="target/speaker.wav",
+    file_path="output.wav"
+)
+```
+
+### Command-line `tts`
+
+<!-- begin-tts-readme -->
+
+Synthesize speech on command line.
+
+You can either use your trained model or choose a model from the provided list.
+
+If you don't specify any models, then it uses LJSpeech based English model.
+
+#### Single Speaker Models
+
+- List provided models:
+
+  ```
+  $ tts --list_models
+  ```
+
+- Get model info (for both tts_models and vocoder_models):
+
+  - Query by type/name:
+    The model_info_by_name uses the name as it from the --list_models.
+    ```
+    $ tts --model_info_by_name "<model_type>/<language>/<dataset>/<model_name>"
+    ```
+    For example:
+    ```
+    $ tts --model_info_by_name tts_models/tr/common-voice/glow-tts
+    $ tts --model_info_by_name vocoder_models/en/ljspeech/hifigan_v2
+    ```
+  - Query by type/idx:
+    The model_query_idx uses the corresponding idx from --list_models.
+
+    ```
+    $ tts --model_info_by_idx "<model_type>/<model_query_idx>"
+    ```
+
+    For example:
+
+    ```
+    $ tts --model_info_by_idx tts_models/3
+    ```
+
+  - Query info for model info by full name:
+    ```
+    $ tts --model_info_by_name "<model_type>/<language>/<dataset>/<model_name>"
+    ```
+
+- Run TTS with default models:
+
+  ```
+  $ tts --text "Text for TTS" --out_path output/path/speech.wav
+  ```
+
+- Run TTS and pipe out the generated TTS wav file data:
+
+  ```
+  $ tts --text "Text for TTS" --pipe_out --out_path output/path/speech.wav | aplay
+  ```
+
+- Run a TTS model with its default vocoder model:
+
+  ```
+  $ tts --text "Text for TTS" --model_name "<model_type>/<language>/<dataset>/<model_name>" --out_path output/path/speech.wav
+  ```
+
+  For example:
+
+  ```
+  $ tts --text "Text for TTS" --model_name "tts_models/en/ljspeech/glow-tts" --out_path output/path/speech.wav
+  ```
+
+- Run with specific TTS and vocoder models from the list:
+
+  ```
+  $ tts --text "Text for TTS" --model_name "<model_type>/<language>/<dataset>/<model_name>" --vocoder_name "<model_type>/<language>/<dataset>/<model_name>" --out_path output/path/speech.wav
+  ```
+
+  For example:
+
+  ```
+  $ tts --text "Text for TTS" --model_name "tts_models/en/ljspeech/glow-tts" --vocoder_name "vocoder_models/en/ljspeech/univnet" --out_path output/path/speech.wav
+  ```
+
+- Run your own TTS model (Using Griffin-Lim Vocoder):
+
+  ```
+  $ tts --text "Text for TTS" --model_path path/to/model.pth --config_path path/to/config.json --out_path output/path/speech.wav
+  ```
+
+- Run your own TTS and Vocoder models:
+
+  ```
+  $ tts --text "Text for TTS" --model_path path/to/model.pth --config_path path/to/config.json --out_path output/path/speech.wav
+      --vocoder_path path/to/vocoder.pth --vocoder_config_path path/to/vocoder_config.json
+  ```
+
+#### Multi-speaker Models
+
+- List the available speakers and choose a <speaker_id> among them:
+
+  ```
+  $ tts --model_name "<language>/<dataset>/<model_name>"  --list_speaker_idxs
+  ```
+
+- Run the multi-speaker TTS model with the target speaker ID:
+
+  ```
+  $ tts --text "Text for TTS." --out_path output/path/speech.wav --model_name "<language>/<dataset>/<model_name>"  --speaker_idx <speaker_id>
+  ```
+
+- Run your own multi-speaker TTS model:
+
+  ```
+  $ tts --text "Text for TTS" --out_path output/path/speech.wav --model_path path/to/model.pth --config_path path/to/config.json --speakers_file_path path/to/speaker.json --speaker_idx <speaker_id>
+  ```
+
+### Voice Conversion Models
+
+```
+$ tts --out_path output/path/speech.wav --model_name "<language>/<dataset>/<model_name>" --source_wav <path/to/speaker/wav> --target_wav <path/to/reference/wav>
+```
+
+<!-- end-tts-readme -->
+
+## Directory Structure
+```
+|- notebooks/       (Jupyter Notebooks for model evaluation, parameter selection and data analysis.)
+|- utils/           (common utilities.)
+|- TTS
+    |- bin/             (folder for all the executables.)
+      |- train*.py                  (train your target model.)
+      |- ...
+    |- tts/             (text to speech models)
+        |- layers/          (model layer definitions)
+        |- models/          (model definitions)
+        |- utils/           (model specific utilities.)
+    |- speaker_encoder/ (Speaker Encoder models.)
+        |- (same)
+    |- vocoder/         (Vocoder models.)
+        |- (same)
+```
