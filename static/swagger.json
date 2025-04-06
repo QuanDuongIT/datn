@@ -1,0 +1,52 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "title": "Text-to-Speech API",
+        "description": "API for converting text to speech",
+        "version": "1.0.0"
+    },
+    "host": "127.0.0.1:5000",
+    "basePath": "/",
+    "schemes": [
+        "http"
+    ],
+    "paths": {
+        "/text-to-speech": {
+            "post": {
+                "summary": "Convert text to speech",
+                "description": "Converts the provided text into speech and returns the audio as a file.",
+                "parameters": [
+                    {
+                        "name": "text",
+                        "in": "body",
+                        "description": "The text to convert to speech.",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "text": {
+                                    "type": "string",
+                                    "example": "こんにちは、元気ですか？"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Audio file successfully generated",
+                        "content": {
+                            "audio/wav": {}
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        }
+    }
+}

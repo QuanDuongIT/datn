@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-Speech API</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Hiệu ứng loading */
+        #loadingSpinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.4em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h2>Text-to-Speech API</h2>
+        <form id="textToSpeechForm">
+            <div class="form-group">
+                <label for="textInput">Enter Text</label>
+                <textarea class="form-control" id="textInput" rows="4"
+                    placeholder="Enter the text you want to convert to speech"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Convert to Speech</button>
+        </form>
+
+        <div class="mt-4">
+            <audio id="audioPlayer" controls style="display: none;">
+                <source id="audioSource" src="" type="audio/wav">
+                Your browser does not support the audio element.
+            </audio>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            $('#textToSpeechForm').on('submit', function (event) {
+                event.preventDefault();
+
+                const text = $('#textInput').val().trim();
+
+                if (!text) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Please enter some text!',
+                    });
+                    return;
+                }
+
+                // Hiển thị hiệu ứng loading
+                $('#loadingSpinner').show();
+
+                $.ajax({
+                    url: '/text-to-speech',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ text: text }),
+                    xhrFields: {
+                        responseType: 'blob'  // Đảm bảo nhận phản hồi dưới dạng Blob
+                    },
+                    success: function (response, status, xhr) {
+                        console.log("Server Response Status: " + xhr.status);  // Kiểm tra mã trạng thái
+                        console.log("Response Blob:", response);  // Kiểm tra phản hồi (Blob)
+
+                        if (xhr.status === 200) {
+                            const audioUrl = URL.createObjectURL(response);
+                            console.log("Audio URL:", audioUrl);  // Kiểm tra URL Blob
+
+                            // Kiểm tra xem URL có hợp lệ không trước khi cập nhật source
+                            const audioElement = $('#audioPlayer')[0];
+                            const audioSource = $('#audioSource')[0];
+                            audioSource.src = audioUrl;
+
+                            // Kiểm tra xem file có thể phát được hay không
+                            audioElement.load();
+                            audioElement.play().catch(error => {
+                                console.error("Error playing audio:", error);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Audio Error',
+                                    text: 'There was an error while playing the audio.',
+                                });
+                            });
+
+                            $('#audioPlayer').show();  // Hiển thị player sau khi URL được cập nhật
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to convert text to speech. Please try again.',
+                            });
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred while converting text to speech. Please try again.',
+                        });
+                    },
+                    complete: function () {
+                        // Ẩn hiệu ứng loading khi yêu cầu hoàn thành
+                        $('#loadingSpinner').hide();
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+
+</html>
