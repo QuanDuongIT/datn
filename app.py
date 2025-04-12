@@ -1,50 +1,57 @@
 import sys
 import os
-from flask import Flask, request, jsonify, send_file, render_template, Response
+from flask import Flask, request, jsonify, send_file, render_template
 
 sys.path.append(os.path.abspath('vits_japanese'))
-from vits_japanese.model_deployment import text_to_speech
+from vits_japanese.model_deployment import text_to_speech, init_synthesizer
 
-model_path = "src/model/best_model.pth"
-config_path = "src/model/config.json"
+sys.path.append(os.path.abspath('vits2_pytorch'))
+from vits2_pytorch.infer_onnx import infer_onnx
+
+from flask import Flask, request, jsonify, send_file, render_template
 
 app = Flask(__name__)
+
+# ✅ Khởi tạo Synthesizer một lần
+synthesizer = init_synthesizer("model/best_model.pth", "model/config.json", use_cuda=False) 
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Endpoint nhận văn bản và chuyển thành giọng nói
 @app.route('/text-to-speech', methods=['POST'])
 def convert_text_to_speech():
-    # Nhận dữ liệu từ body request
     data = request.get_json()
     text = data.get('text')
-    
-    # Kiểm tra xem văn bản có hợp lệ không
+    model_id = data.get('model_id', 'model1')  # default to model1
+
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    # Tạo đường dẫn tệp âm thanh đầu ra
     out_path = "out.wav"
-    
+
     try:
-        # Chuyển văn bản thành giọng nói
-        text_to_speech(text, model_path, config_path, out_path)
-        
-        # Kiểm tra xem tệp âm thanh có tồn tại không
+        print(f'training model: {model_id}')
+        if model_id == 'model1':
+            infer_onnx(
+                text=text,
+                model_path="vits2_pytorch/model/G_6000.onnx",
+                config_path="vits2_pytorch/model/config.json",
+                output_path=out_path
+            )
+        else:
+            # ✅ Dùng lại synthesizer đã khởi tạo
+            text_to_speech(text, out_path, synthesizer)
+            
         if not os.path.exists(out_path):
             return jsonify({"error": "Audio file was not created."}), 500
 
-        # In thông tin debug về tệp âm thanh
         print(f"Audio file created at: {out_path}")
-
-        # Trả về tệp âm thanh dưới dạng file response
         return send_file(out_path, mimetype='audio/wav', as_attachment=False)
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Chạy ứng dụng
 if __name__ == '__main__':
     app.run(debug=True)
+

@@ -1,17 +1,27 @@
+import time
 from TTS.utils.synthesizer import Synthesizer
 
-def text_to_speech(text, model_path, config_path, out_path):
-    # Cung cấp các tham số cần thiết cho Synthesizer
+# Khởi tạo sẵn Synthesizer (chỉ làm 1 lần)
+def init_synthesizer(model_path, config_path, use_cuda=False):
     synthesizer = Synthesizer(
-        tts_checkpoint=model_path,          # Đường dẫn đến mô hình TTS
-        tts_config_path=config_path,        # Đường dẫn đến cấu hình TTS
-        use_cuda=False                       # Sử dụng CPU thay vì GPU (set True nếu muốn dùng GPU)
+        tts_checkpoint=model_path,
+        tts_config_path=config_path,
+        use_cuda=use_cuda
     )
+    return synthesizer
+
+
+def text_to_speech(text, out_path, synthesizer):
+    start_time = time.time()  # Bắt đầu đo thời gian
+
+    # Chuyển văn bản thành sóng âm
+    wav = synthesizer.tts(text)
     
-    # Synthesize giọng nói và lưu vào file
-    wav = synthesizer.tts(text)  # Phát sinh sóng âm thanh từ văn bản
-    synthesizer.save_wav(wav, out_path)  # Lưu sóng âm thanh vào file
+    # Lưu sóng âm thanh vào file
+    synthesizer.save_wav(wav, out_path)
+
+    end_time = time.time()  # Kết thúc đo thời gian
+    duration = end_time - start_time  # Tổng thời gian
+
     print(f"Audio saved to {out_path}")
-
-
-
+    print(f"⏱️ Time taken for synthesis: {duration:.2f} seconds")

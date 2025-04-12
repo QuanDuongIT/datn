@@ -1,3 +1,5 @@
+# mecab-python3==1.0.6 unidic-lite==1.0.8 cutlet coqpit trainer coqpit mutagen anyascii bangla bnnumerizer bnunicodenormalizer gruut jamo pypinyin pysbd pyyaml requests torchaudio librosa tqdm pandas matplotlib inflect jieba flask flask-swagger-ui
+
 mecab-python3==1.0.6
 unidic-lite==1.0.8
 cutlet
@@ -25,3 +27,12 @@ jieba
 
 flask
 flask-swagger-ui
+
+# librosa matplotlib numpy torchvision
+# !apt-get install espeak
+# !pip install Cython phonemizer scipy torch 
+# !pip install Unidecode tensorboard onnx onnxruntime gradio 
+# !pip install pyopenjtalk
+# !pip install unidecode
+
+# pip install pyopenjtalk-prebuilt

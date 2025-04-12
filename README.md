@@ -5,8 +5,8 @@ Follow the steps below to set up and run the project coqui-ai/TTS vits:
 Before running the application, make sure to set the model path and config path correctly in your application. You can configure the paths in the relevant part of your code:
 # Configuring model and configuration file paths in app.py
 
-model_path = "src/model/best_model.pth"
-config_path = "src/model/config.json"
+model_path = "model/best_model.pth"
+config_path = "model/config.json"
 
 2. Create a Virtual Environment
 To create an isolated Python environment, run the following command:
