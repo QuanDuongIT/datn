@@ -42,15 +42,16 @@ def main():
     os.environ["MASTER_PORT"] = "6060"
 
     hps = utils.get_hparams()
-    mp.spawn(
-        run,
-        nprocs=n_gpus,
-        args=(
-            n_gpus,
-            hps,
-        ),
-    )
-
+    # mp.spawn(
+    #     run,
+    #     nprocs=n_gpus,
+    #     args=(
+    #         n_gpus,
+    #         hps,
+    #     ),
+    # )
+    # Gọi hàm run trực tiếp mà không cần mp.spawn
+    run(0, n_gpus, hps)
 
 def run(rank, n_gpus, hps):
     net_dur_disc = None
