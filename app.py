@@ -10,9 +10,6 @@ from vits2_pytorch.infer_onnx import infer_onnx
 
 app = Flask(__name__)
 
-# ✅ Khởi tạo synthesizer một lần
-synthesizer = init_synthesizer("model/best_model.pth", "model/config.json", use_cuda=False)
-
 @app.route('/')
 def home():
     return render_template('home.html')
@@ -41,11 +38,12 @@ def convert_text_to_speech():
         if model_id == 'model1':
             infer_onnx(
                 text=text,
-                model_path="vits2_pytorch/model/G_6000.onnx",
+                model_path="vits2_pytorch/model/G_9000.onnx",
                 config_path="vits2_pytorch/model/config.json",
                 output_path=out_path
             )
         else:
+            synthesizer = init_synthesizer("model/best_model.pth", "model/config.json", use_cuda=False)
             text_to_speech(text, out_path, synthesizer)
 
         if not os.path.exists(out_path):
