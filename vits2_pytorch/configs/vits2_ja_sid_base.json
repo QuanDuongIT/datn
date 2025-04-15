@@ -35,7 +35,7 @@
         "mel_fmin": 0.0,
         "mel_fmax": null,
         "add_blank": false,
-        "n_speakers": 2,
+        "n_speakers": 3,
         "cleaned_text": true
     },
     "model": {
@@ -88,7 +88,7 @@
             4,
             4
         ],
-        "duration_discriminator_type": "dur_disc_1",
+        "duration_discriminator_type": "dur_disc_2",
         "n_layers_q": 3,
         "use_spectral_norm": false,
         "use_sdp": false,
