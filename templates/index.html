@@ -4,9 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ title }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+
+    <!-- Bootstrap & JS libs -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
         #loadingSpinner {
             display: none;
@@ -22,31 +27,59 @@
             height: 3rem;
             border-width: 0.4em;
         }
+
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .card {
+            margin-top: 60px;
+        }
     </style>
 </head>
 
 <body>
-    <div class="container mt-5">
-        <h2>{{ title }} - Text-to-Speech</h2>
-        <form id="textToSpeechForm">
-            <div class="form-group">
-                <label for="textInput">Enter Text</label>
-                <textarea class="form-control" id="textInput" rows="4" placeholder="Enter text to convert"></textarea>
+    <div class="container">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="card-title mb-4">{{ title }} - Text-to-Speech</h3>
+
+                <form id="textToSpeechForm">
+                    <div class="form-group">
+                        <label for="textInput">Enter text to convert:</label>
+                        <textarea class="form-control" id="textInput" rows="4"
+                            placeholder="こんにちは！音声に変換してみましょう。"></textarea>
+                    </div>
+
+                    <!-- 🔽 Speaker dropdown -->
+                    <div id="speakerSelect" class="form-group" style="display: none;">
+                        <label for="sid">Speaker ID (optional for model3):</label>
+                        <select class="form-control" id="sid">
+                            <option value="0">Speaker 0</option>
+                            <option value="1">Speaker 1</option>
+                            <option value="2">Speaker 2</option>
+                        </select>
+                    </div>
+
+                    <input type="hidden" id="modelId" value="{{ model_id }}">
+
+                    <button type="submit" class="btn btn-primary">🔊 Convert to Speech</button>
+                </form>
+
+                <div class="mt-4">
+                    <audio id="audioPlayer" controls style="display: none;">
+                        <source id="audioSource" src="" type="audio/wav">
+                        Your browser does not support the audio element.
+                    </audio>
+                    <div class="mt-2">
+                        <small id="execTimeText" class="text-muted" style="display: none;"></small>
+                    </div>
+                </div>
             </div>
-
-            <input type="hidden" id="modelId" value="{{ model_id }}">
-
-            <button type="submit" class="btn btn-primary">Convert to Speech</button>
-        </form>
-
-        <div class="mt-4">
-            <audio id="audioPlayer" controls style="display: none;">
-                <source id="audioSource" src="" type="audio/wav">
-                Your browser does not support the audio element.
-            </audio>
         </div>
     </div>
 
+    <!-- Spinner -->
     <div id="loadingSpinner">
         <div class="spinner-border text-primary" role="status">
             <span class="sr-only">Loading...</span>
@@ -55,42 +88,67 @@
 
     <script>
         $(document).ready(function () {
+            const modelId = $('#modelId').val();
+            if (modelId === 'model3') {
+                $('#speakerSelect').show();
+            }
+
             $('#textToSpeechForm').on('submit', function (event) {
                 event.preventDefault();
 
                 const text = $('#textInput').val().trim();
                 const modelId = $('#modelId').val();
+                const sid = $('#sid').val();
 
                 if (!text) {
-                    Swal.fire({ icon: 'error', title: 'Oops...', text: 'Please enter some text!' });
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Text Missing',
+                        text: 'Please enter some text before converting!',
+                    });
                     return;
                 }
 
                 $('#loadingSpinner').show();
+                $('#execTimeText').hide(); // Hide old result
+
+                const requestData = { text: text, model_id: modelId };
+                if (modelId === 'model3' && sid !== '') {
+                    requestData.sid = parseInt(sid);
+                }
 
                 $.ajax({
                     url: '/text-to-speech',
-                    type: 'POST',
+                    method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({ text: text, model_id: modelId }),
+                    data: JSON.stringify(requestData),
                     xhrFields: { responseType: 'blob' },
                     success: function (response, status, xhr) {
                         if (xhr.status === 200) {
                             const audioUrl = URL.createObjectURL(response);
                             $('#audioSource').attr('src', audioUrl);
-                            const audioElement = $('#audioPlayer')[0];
-                            audioElement.load();
-                            audioElement.play().catch(error => {
-                                Swal.fire({ icon: 'error', title: 'Audio Error', text: 'Could not play audio.' });
-                                console.error(error);
+                            const audio = $('#audioPlayer')[0];
+                            audio.load();
+                            audio.play().catch(err => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Playback Failed',
+                                    text: 'Audio file was created but could not be played.',
+                                });
+                                console.error(err);
                             });
                             $('#audioPlayer').show();
+
+                            const execTime = xhr.getResponseHeader('X-Execution-Time');
+                            if (execTime) {
+                                $('#execTimeText').text(`⏱️ Model execution time: ${execTime} seconds`).show();
+                            }
                         } else {
-                            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to convert text to speech.' });
+                            Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to convert text.' });
                         }
                     },
                     error: function () {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Something went wrong during the request.' });
+                        Swal.fire({ icon: 'error', title: 'Request Failed', text: 'Something went wrong with the request.' });
                     },
                     complete: function () {
                         $('#loadingSpinner').hide();

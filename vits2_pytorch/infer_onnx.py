@@ -41,7 +41,7 @@ def infer_onnx(text, model_path, config_path, output_path, sid=None, providers=N
     text_array = np.expand_dims(np.array(phoneme_ids, dtype=np.int64), 0)
     text_lengths = np.array([text_array.shape[1]], dtype=np.int64)
     scales = np.array([0.667, 1.0, 0.8], dtype=np.float32)
-    sid_array = np.array([int(sid)]) if sid is not None else None
+    sid_array = np.array([int(sid)], dtype=np.int64) if sid is not None else None
 
     audio = model.run(
         None,
