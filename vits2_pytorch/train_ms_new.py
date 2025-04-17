@@ -29,8 +29,6 @@ from models import (AVAILABLE_DURATION_DISCRIMINATOR_TYPES,
                     MultiPeriodDiscriminator, SynthesizerTrn)
 from text.symbols import symbols
 
-
-
 torch.backends.cudnn.benchmark = True
 global_step = 0
 
@@ -56,10 +54,8 @@ def main():
     run(0, n_gpus, hps)
 
 def run(rank, n_gpus, hps):
-
-    global global_step
     net_dur_disc = None
-
+    global global_step
     if rank == 0:
         logger = utils.get_logger(hps.model_dir)
         logger.info(hps)
@@ -73,26 +69,115 @@ def run(rank, n_gpus, hps):
     torch.manual_seed(hps.train.seed)
     torch.cuda.set_device(rank)
 
-    posterior_channels = 80 if hps.model.get("use_mel_posterior_encoder", False) else hps.data.filter_length // 2 + 1
-    hps.data.use_mel_posterior_encoder = hps.model.get("use_mel_posterior_encoder", False)
-    use_transformer_flows = hps.model.get("use_transformer_flows", False)
-    use_spk_conditioned_encoder = hps.model.get("use_spk_conditioned_encoder", False)
-    use_noise_scaled_mas = hps.model.get("use_noise_scaled_mas", False)
+    if (
+        "use_mel_posterior_encoder" in hps.model.keys()
+        and hps.model.use_mel_posterior_encoder == True
+    ):
+        print("Using mel posterior encoder for VITS2")
+        posterior_channels = 80  # vits2
+        hps.data.use_mel_posterior_encoder = True
+    else:
+        print("Using lin posterior encoder for VITS1")
+        posterior_channels = hps.data.filter_length // 2 + 1
+        hps.data.use_mel_posterior_encoder = False
 
-    mas_noise_scale_initial = 0.01 if use_noise_scaled_mas else 0.0
-    noise_scale_delta = 2e-6 if use_noise_scaled_mas else 0.0
+    train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
+    train_sampler = DistributedBucketSampler(
+        train_dataset,
+        hps.train.batch_size,
+        [32, 300, 400, 500, 600, 700, 800, 900, 1000],
+        num_replicas=n_gpus,
+        rank=rank,
+        shuffle=True,
+    )
+    collate_fn = TextAudioSpeakerCollate()
+    train_loader = DataLoader(
+        train_dataset,
+        num_workers=8,
+        shuffle=False,
+        pin_memory=True,
+        collate_fn=collate_fn,
+        batch_sampler=train_sampler,
+    )
+    if rank == 0:
+        eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
+        eval_loader = DataLoader(
+            eval_dataset,
+            num_workers=8,
+            shuffle=False,
+            batch_size=hps.train.batch_size,
+            pin_memory=True,
+            drop_last=False,
+            collate_fn=collate_fn,
+        )
+    # some of these flags are not being used in the code and directly set in hps json file.
+    # they are kept here for reference and prototyping.
+    if (
+        "use_transformer_flows" in hps.model.keys()
+        and hps.model.use_transformer_flows == True
+    ):
+        use_transformer_flows = True
+        transformer_flow_type = hps.model.transformer_flow_type
+        print(f"Using transformer flows {transformer_flow_type} for VITS2")
+        assert (
+            transformer_flow_type in AVAILABLE_FLOW_TYPES
+        ), f"transformer_flow_type must be one of {AVAILABLE_FLOW_TYPES}"
+    else:
+        print("Using normal flows for VITS1")
+        use_transformer_flows = False
 
-    use_duration_discriminator = hps.model.get("use_duration_discriminator", False)
-    if use_duration_discriminator:
-        duration_discriminator_type = getattr(hps.model, "duration_discriminator_type", "dur_disc_1")
-        gin_channels = hps.model.gin_channels if hps.data.n_speakers > 0 else 0
+    if (
+        "use_spk_conditioned_encoder" in hps.model.keys()
+        and hps.model.use_spk_conditioned_encoder == True
+    ):
+        if hps.data.n_speakers == 0:
+            raise ValueError(
+                "n_speakers must be > 0 when using spk conditioned encoder to train multi-speaker model"
+            )
+        use_spk_conditioned_encoder = True
+    else:
+        print("Using normal encoder for VITS1")
+        use_spk_conditioned_encoder = False
+
+    if (
+        "use_noise_scaled_mas" in hps.model.keys()
+        and hps.model.use_noise_scaled_mas == True
+    ):
+        print("Using noise scaled MAS for VITS2")
+        use_noise_scaled_mas = True
+        mas_noise_scale_initial = 0.01
+        noise_scale_delta = 2e-6
+    else:
+        print("Using normal MAS for VITS1")
+        use_noise_scaled_mas = False
+        mas_noise_scale_initial = 0.0
+        noise_scale_delta = 0.0
+
+    if (
+        "use_duration_discriminator" in hps.model.keys()
+        and hps.model.use_duration_discriminator == True
+    ):
+        # print("Using duration discriminator for VITS2")
+        use_duration_discriminator = True
+
+        # comment - choihkk
+        # add duration discriminator type here
+        # I think it would be a good idea to come up with a method to input this part accurately, like a hydra
+        duration_discriminator_type = getattr(
+            hps.model, "duration_discriminator_type", "dur_disc_1"
+        )
+        print(f"Using duration_discriminator {duration_discriminator_type} for VITS2")
+        assert (
+            duration_discriminator_type in AVAILABLE_DURATION_DISCRIMINATOR_TYPES
+        ), f"duration_discriminator_type must be one of {AVAILABLE_DURATION_DISCRIMINATOR_TYPES}"
+        duration_discriminator_type = AVAILABLE_DURATION_DISCRIMINATOR_TYPES
         if duration_discriminator_type == "dur_disc_1":
             net_dur_disc = DurationDiscriminatorV1(
                 hps.model.hidden_channels,
                 hps.model.hidden_channels,
                 3,
                 0.1,
-                gin_channels=gin_channels,
+                gin_channels=hps.model.gin_channels if hps.data.n_speakers != 0 else 0,
             ).cuda(rank)
         elif duration_discriminator_type == "dur_disc_2":
             net_dur_disc = DurationDiscriminatorV2(
@@ -100,28 +185,12 @@ def run(rank, n_gpus, hps):
                 hps.model.hidden_channels,
                 3,
                 0.1,
-                gin_channels=gin_channels,
-            ).cuda(rank)
-
-    train_dataset = TextAudioSpeakerLoader(hps.data.training_files, hps.data)
-    train_sampler = DistributedBucketSampler(
-        train_dataset, hps.train.batch_size,
-        [32, 300, 400, 500, 600, 700, 800, 900, 1000],
-        num_replicas=n_gpus, rank=rank, shuffle=True,
-    )
-    collate_fn = TextAudioSpeakerCollate()
-    train_loader = DataLoader(
-        train_dataset, num_workers=8, shuffle=False, pin_memory=True,
-        collate_fn=collate_fn, batch_sampler=train_sampler,
-    )
-
-    if rank == 0:
-        eval_dataset = TextAudioSpeakerLoader(hps.data.validation_files, hps.data)
-        eval_loader = DataLoader(
-            eval_dataset, num_workers=8, shuffle=False,
-            batch_size=hps.train.batch_size, pin_memory=True,
-            drop_last=False, collate_fn=collate_fn,
-        )
+                gin_channels=hps.model.gin_channels if hps.data.n_speakers != 0 else 0,
+            ).cuda(rank) 
+    else:
+        print("NOT using any duration discriminator like VITS1")
+        net_dur_disc = None
+        use_duration_discriminator = False
 
     net_g = SynthesizerTrn(
         len(symbols),
@@ -132,61 +201,79 @@ def run(rank, n_gpus, hps):
         noise_scale_delta=noise_scale_delta,
         **hps.model,
     ).cuda(rank)
-
     net_d = MultiPeriodDiscriminator(hps.model.use_spectral_norm).cuda(rank)
+    optim_g = torch.optim.AdamW(
+        net_g.parameters(),
+        hps.train.learning_rate,
+        betas=hps.train.betas,
+        eps=hps.train.eps,
+    )
+    optim_d = torch.optim.AdamW(
+        net_d.parameters(),
+        hps.train.learning_rate,
+        betas=hps.train.betas,
+        eps=hps.train.eps,
+    )
+    if net_dur_disc is not None:
+        optim_dur_disc = torch.optim.AdamW(
+            net_dur_disc.parameters(),
+            hps.train.learning_rate,
+            betas=hps.train.betas,
+            eps=hps.train.eps,
+        )
+    else:
+        optim_dur_disc = None
 
-    optim_g = torch.optim.AdamW(net_g.parameters(), hps.train.learning_rate, betas=hps.train.betas, eps=hps.train.eps)
-    optim_d = torch.optim.AdamW(net_d.parameters(), hps.train.learning_rate, betas=hps.train.betas, eps=hps.train.eps)
-    optim_dur_disc = torch.optim.AdamW(net_dur_disc.parameters(), hps.train.learning_rate, betas=hps.train.betas, eps=hps.train.eps) if net_dur_disc else None
-
-    # ✅ Load checkpoint với speaker mới (SAFE)
-    def load_checkpoint_soft(path, model, optimizer):
-        checkpoint = torch.load(path, map_location="cpu")
-        state_dict = checkpoint["model"]
-
-        # copy speaker_emb safely
-        if "speaker_emb.weight" in state_dict:
-            old_weight = state_dict["speaker_emb.weight"]
-            target_weight = model.module.speaker_emb.weight.data
-            num_old = old_weight.shape[0]
-            num_new = target_weight.shape[0]
-            if num_new > num_old:
-                print(f"[INFO] Expanding speaker_emb: {num_old} → {num_new}")
-                target_weight[:num_old] = old_weight
-                state_dict["speaker_emb.weight"] = target_weight
-        model.load_state_dict(state_dict, strict=False)
-        optimizer.load_state_dict(checkpoint["optim"])
-        return checkpoint.get("epoch", 1)
+    # comment - choihkk
+    # if we comment out unused parameter like DurationDiscriminator's self.pre_out_norm1,2 self.norm_1,2
+    # and ResidualCouplingTransformersLayer's self.post_transformer
+    # we don't have to set find_unused_parameters=True
+    # but I will not proceed with commenting out for compatibility with the latest work for others
+    net_g = DDP(net_g, device_ids=[rank], find_unused_parameters=True)
+    net_d = DDP(net_d, device_ids=[rank], find_unused_parameters=True)
+    if net_dur_disc is not None:
+        net_dur_disc = DDP(
+            net_dur_disc, device_ids=[rank], find_unused_parameters=True)
 
     try:
-        epoch_str = load_checkpoint_soft(
-            utils.latest_checkpoint_path(hps.model_dir, "G_*.pth"), net_g, optim_g)
-        _ = utils.load_checkpoint(
-            utils.latest_checkpoint_path(hps.model_dir, "D_*.pth"), net_d, optim_d)
-        if net_dur_disc:
-            _ = utils.load_checkpoint(
+        _, _, _, epoch_str = utils.load_checkpoint(
+            utils.latest_checkpoint_path(hps.model_dir, "G_*.pth"), net_g, optim_g
+        )
+        _, _, _, epoch_str = utils.load_checkpoint(
+            utils.latest_checkpoint_path(hps.model_dir, "D_*.pth"), net_d, optim_d
+        )
+        if net_dur_disc is not None:
+            _, _, _, epoch_str = utils.load_checkpoint(
                 utils.latest_checkpoint_path(hps.model_dir, "DUR_*.pth"),
-                net_dur_disc, optim_dur_disc)
+                net_dur_disc,
+                optim_dur_disc,
+            )
         global_step = (epoch_str - 1) * len(train_loader)
     except:
         epoch_str = 1
         global_step = 0
 
-    scheduler_g = torch.optim.lr_scheduler.ExponentialLR(optim_g, gamma=hps.train.lr_decay, last_epoch=epoch_str - 2)
-    scheduler_d = torch.optim.lr_scheduler.ExponentialLR(optim_d, gamma=hps.train.lr_decay, last_epoch=epoch_str - 2)
-    scheduler_dur_disc = torch.optim.lr_scheduler.ExponentialLR(optim_dur_disc, gamma=hps.train.lr_decay, last_epoch=epoch_str - 2) if net_dur_disc else None
+    scheduler_g = torch.optim.lr_scheduler.ExponentialLR(
+        optim_g, gamma=hps.train.lr_decay, last_epoch=epoch_str - 2
+    )
+    scheduler_d = torch.optim.lr_scheduler.ExponentialLR(
+        optim_d, gamma=hps.train.lr_decay, last_epoch=epoch_str - 2
+    )
+    if net_dur_disc is not None:
+        scheduler_dur_disc = torch.optim.lr_scheduler.ExponentialLR(
+            optim_dur_disc, gamma=hps.train.lr_decay, last_epoch=epoch_str - 2
+        )
+    else:
+        scheduler_dur_disc = None
 
     scaler = GradScaler(enabled=hps.train.fp16_run)
-
-    net_g = DDP(net_g, device_ids=[rank], find_unused_parameters=True)
-    net_d = DDP(net_d, device_ids=[rank], find_unused_parameters=True)
-    if net_dur_disc:
-        net_dur_disc = DDP(net_dur_disc, device_ids=[rank], find_unused_parameters=True)
 
     for epoch in range(epoch_str, hps.train.epochs + 1):
         if rank == 0:
             train_and_evaluate(
-                rank, epoch, hps,
+                rank,
+                epoch,
+                hps,
                 [net_g, net_d, net_dur_disc],
                 [optim_g, optim_d, optim_dur_disc],
                 [scheduler_g, scheduler_d, scheduler_dur_disc],
@@ -197,17 +284,20 @@ def run(rank, n_gpus, hps):
             )
         else:
             train_and_evaluate(
-                rank, epoch, hps,
+                rank,
+                epoch,
+                hps,
                 [net_g, net_d, net_dur_disc],
                 [optim_g, optim_d, optim_dur_disc],
                 [scheduler_g, scheduler_d, scheduler_dur_disc],
                 scaler,
                 [train_loader, None],
-                None, None,
+                None,
+                None,
             )
         scheduler_g.step()
         scheduler_d.step()
-        if scheduler_dur_disc:
+        if net_dur_disc is not None:
             scheduler_dur_disc.step()
 
 
@@ -228,6 +318,10 @@ def train_and_evaluate(
     net_d.train()
     if net_dur_disc is not None:
         net_dur_disc.train()
+
+    train_loss = 0
+    val_loss = 0
+    num_batches = 0
 
     if rank == 0:
         loader = tqdm.tqdm(train_loader, desc="Loading train data")
@@ -277,10 +371,6 @@ def train_and_evaluate(
             ):
                 mel = spec
             else:
-                # comment - choihkk
-                # for numerical stable when using fp16 and torch>=2.0.0,
-                # spec.float() could be help in the training stage
-                # https://github.com/jaywalnut310/vits/issues/15
                 mel = spec_to_mel_torch(
                     spec.float(),
                     hps.data.filter_length,
@@ -321,7 +411,6 @@ def train_and_evaluate(
                     hidden_x.detach(), x_mask.detach(), logw_.detach(), logw.detach()
                 )
                 with autocast(enabled=False):
-                    # TODO: I think need to mean using the mask, but for now, just mean all
                     (
                         loss_dur_disc,
                         losses_dur_disc_r,
@@ -366,6 +455,9 @@ def train_and_evaluate(
         scaler.step(optim_g)
         scaler.update()
 
+        train_loss += loss_gen_all.item()
+        num_batches += 1
+
         if rank == 0:
             if global_step % hps.train.log_interval == 0:
                 lr = optim_g.param_groups[0]["lr"]
@@ -384,60 +476,18 @@ def train_and_evaluate(
                     "grad_norm_d": grad_norm_d,
                     "grad_norm_g": grad_norm_g,
                 }
-                if net_dur_disc is not None:
-                    scalar_dict.update(
-                        {
-                            "loss/dur_disc/total": loss_dur_disc_all,
-                            "grad_norm_dur_disc": grad_norm_dur_disc,
-                        }
-                    )
-                scalar_dict.update(
-                    {
-                        "loss/g/fm": loss_fm,
-                        "loss/g/mel": loss_mel,
-                        "loss/g/dur": loss_dur,
-                        "loss/g/kl": loss_kl,
-                    }
-                )
 
                 scalar_dict.update(
                     {"loss/g/{}".format(i): v for i, v in enumerate(losses_gen)}
                 )
-                scalar_dict.update(
-                    {"loss/d_r/{}".format(i): v for i, v in enumerate(losses_disc_r)}
-                )
-                scalar_dict.update(
-                    {"loss/d_g/{}".format(i): v for i, v in enumerate(losses_disc_g)}
-                )
-
-                # if net_dur_disc is not None:
-                #   scalar_dict.update({"loss/dur_disc_r" : f"{losses_dur_disc_r}"})
-                #   scalar_dict.update({"loss/dur_disc_g" : f"{losses_dur_disc_g}"})
-                #   scalar_dict.update({"loss/dur_gen" : f"{loss_dur_gen}"})
-
-                image_dict = {
-                    "slice/mel_org": utils.plot_spectrogram_to_numpy(
-                        y_mel[0].data.cpu().numpy()
-                    ),
-                    "slice/mel_gen": utils.plot_spectrogram_to_numpy(
-                        y_hat_mel[0].data.cpu().numpy()
-                    ),
-                    "all/mel": utils.plot_spectrogram_to_numpy(
-                        mel[0].data.cpu().numpy()
-                    ),
-                    "all/attn": utils.plot_alignment_to_numpy(
-                        attn[0, 0].data.cpu().numpy()
-                    ),
-                }
                 utils.summarize(
                     writer=writer,
                     global_step=global_step,
-                    images=image_dict,
                     scalars=scalar_dict,
                 )
 
             if global_step % hps.train.eval_interval == 0:
-                evaluate(hps, net_g, eval_loader, writer_eval)
+                evaluate(hps, net_g, eval_loader, writer_eval,global_step)
                 utils.save_checkpoint(
                     net_g,
                     optim_g,
@@ -460,15 +510,34 @@ def train_and_evaluate(
                         epoch,
                         os.path.join(hps.model_dir, "DUR_{}.pth".format(global_step)),
                     )
+
                 utils.remove_old_checkpoints(hps.model_dir, prefixes=["G_*.pth", "D_*.pth", "DUR_*.pth"])
         global_step += 1
 
     if rank == 0:
         logger.info("====> Epoch: {}".format(epoch))
+        avg_train_loss = train_loss / num_batches
+        logger.info(f"Average Training Loss for Epoch {epoch}: {avg_train_loss}")
 
 
-def evaluate(hps, generator, eval_loader, writer_eval):
+
+def evaluate(hps, generator, eval_loader, writer_eval, global_step):
+    import torch
+    import torch.nn as nn
+    from utils import summarize, plot_spectrogram_to_numpy
+    from mel_processing import mel_spectrogram_torch, spec_to_mel_torch
+
     generator.eval()
+    criterion = nn.MSELoss()
+    total_loss = 0
+    num_batches = 0
+    max_eval_batches = 2         # Giới hạn batch để đánh giá nhanh
+    max_input_len = 500          # Giới hạn độ dài input để tránh treo máy
+
+    print("🔍 Running quick evaluation...")
+
+    sample_logged = False
+
     with torch.no_grad():
         for batch_idx, (
             x,
@@ -479,63 +548,91 @@ def evaluate(hps, generator, eval_loader, writer_eval):
             y_lengths,
             speakers,
         ) in enumerate(eval_loader):
+
+            if batch_idx >= max_eval_batches:
+                break
+
+            print(f"📦 Evaluating batch {batch_idx}...")
+
+            # Chuyển dữ liệu lên GPU
             x, x_lengths = x.cuda(0), x_lengths.cuda(0)
             spec, spec_lengths = spec.cuda(0), spec_lengths.cuda(0)
             y, y_lengths = y.cuda(0), y_lengths.cuda(0)
             speakers = speakers.cuda(0)
+            print("🛸 Data moved to GPU.")
 
-            # remove else
-            x = x[:1]
-            x_lengths = x_lengths[:1]
-            spec = spec[:1]
-            spec_lengths = spec_lengths[:1]
-            y = y[:1]
-            y_lengths = y_lengths[:1]
-            speakers = speakers[:1]
-            break
-        y_hat, attn, mask, *_ = generator.module.infer(
-            x, x_lengths, speakers, max_len=1000
-        )
-        y_hat_lengths = mask.sum([1, 2]).long() * hps.data.hop_length
+            # Giới hạn độ dài để tránh quá tải
+            x = x[:, :max_input_len]                     # x thường có shape [B, T]
+            spec = spec[:, :, :max_input_len]            # spec có shape [B, C, T]
+            y = y[:, :, :max_input_len]                  # y có shape [B, C, T]
 
-        if hps.model.use_mel_posterior_encoder or hps.data.use_mel_posterior_encoder:
-            mel = spec
-        else:
-            mel = spec_to_mel_torch(
-                spec,
-                hps.data.filter_length,
-                hps.data.n_mel_channels,
-                hps.data.sampling_rate,
-                hps.data.mel_fmin,
-                hps.data.mel_fmax,
+            print(f"🔢 Shapes — x: {x.shape}, spec: {spec.shape}, y: {y.shape}")
+
+            # Inference
+            y_hat, attn, mask, *_ = generator.module.infer(
+                x, x_lengths, speakers, max_len=400
             )
-        y_hat_mel = mel_spectrogram_torch(
-            y_hat.squeeze(1).float(),
-            hps.data.filter_length,
-            hps.data.n_mel_channels,
-            hps.data.sampling_rate,
-            hps.data.hop_length,
-            hps.data.win_length,
-            hps.data.mel_fmin,
-            hps.data.mel_fmax,
-        )
-    image_dict = {
-        "gen/mel": utils.plot_spectrogram_to_numpy(y_hat_mel[0].cpu().numpy())
-    }
-    audio_dict = {"gen/audio": y_hat[0, :, : y_hat_lengths[0]]}
-    if global_step == 0:
-        image_dict.update(
-            {"gt/mel": utils.plot_spectrogram_to_numpy(mel[0].cpu().numpy())}
-        )
-        audio_dict.update({"gt/audio": y[0, :, : y_lengths[0]]})
+            y_hat_lengths = mask.sum([1, 2]).long() * hps.data.hop_length
+            print("🎙 Inference done.")
 
-    utils.summarize(
-        writer=writer_eval,
-        global_step=global_step,
-        images=image_dict,
-        audios=audio_dict,
-        audio_sampling_rate=hps.data.sampling_rate,
-    )
+            # Cắt ground truth để tính loss
+            min_len = min(y.size(2), y_hat.size(2))  # Tính chiều dài nhỏ nhất giữa y và y_hat
+            y_trimmed = y[:, :, :min_len]
+            y_hat_trimmed = y_hat[:, :, :min_len]
+
+            loss = criterion(y_hat_trimmed, y_trimmed)
+            total_loss += loss.item()
+            num_batches += 1
+
+            # Logging mel và audio của 1 mẫu
+            if not sample_logged:
+                if hps.model.use_mel_posterior_encoder or hps.data.use_mel_posterior_encoder:
+                    mel = spec
+                else:
+                    mel = spec_to_mel_torch(
+                        spec,
+                        hps.data.filter_length,
+                        hps.data.n_mel_channels,
+                        hps.data.sampling_rate,
+                        hps.data.mel_fmin,
+                        hps.data.mel_fmax,
+                    )
+
+                y_hat_mel = mel_spectrogram_torch(
+                    y_hat.squeeze(1).float(),
+                    hps.data.filter_length,
+                    hps.data.n_mel_channels,
+                    hps.data.sampling_rate,
+                    hps.data.hop_length,
+                    hps.data.win_length,
+                    hps.data.mel_fmin,
+                    hps.data.mel_fmax,
+                )
+
+                image_dict = {
+                    "gen/mel": plot_spectrogram_to_numpy(y_hat_mel[0].cpu().numpy()),
+                    "gt/mel": plot_spectrogram_to_numpy(mel[0].cpu().numpy()),
+                }
+
+                audio_dict = {
+                    "gen/audio": y_hat[0, :, : y_hat_lengths[0]],
+                    "gt/audio": y[0, :, : y_lengths[0]],
+                }
+
+                summarize(
+                    writer=writer_eval,
+                    global_step=global_step,
+                    images=image_dict,
+                    audios=audio_dict,
+                    audio_sampling_rate=hps.data.sampling_rate,
+                )
+                sample_logged = True
+                print("📈 Logged mel + audio to TensorBoard.")
+
+    avg_loss = total_loss / max(1, num_batches)
+    writer_eval.add_scalar("eval/mse_loss_avg", avg_loss, global_step)
+    print(f"✅ Eval done — Avg MSE Loss: {avg_loss:.6f}")
+
     generator.train()
 
 
