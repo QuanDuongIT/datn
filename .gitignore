@@ -2,3 +2,4 @@ venv/
 *.wav
 *.pth
 src/**/*.json
+text1.txt

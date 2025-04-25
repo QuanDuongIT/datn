@@ -46,14 +46,14 @@ def convert_text_to_speech():
         if model_id == 'model1':
             infer_onnx(
                 text=text,
-                model_path="vits2_pytorch/model/G_9000.onnx",
+                model_path="vits2_pytorch/model/G_15000.onnx",
                 config_path="vits2_pytorch/model/config.json",
                 output_path=out_path
             )
         elif model_id == 'model3':
             infer_onnx(
                 text=text,
-                model_path="vits2_pytorch/model/G_ms_2000.onnx",
+                model_path="vits2_pytorch/model/G_ms_10000.onnx",
                 config_path="vits2_pytorch/model/config_ms.json",
                 output_path=out_path,
                 sid=data.get('sid', None)
