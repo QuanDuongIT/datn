@@ -202,6 +202,36 @@ def ljspeech(root_path, meta_file, **kwargs):  # pylint: disable=unused-argument
             items.append({"text": text, "audio_file": wav_file, "speaker_name": speaker_name, "root_path": root_path})
     return items
 
+def isla(root_path, meta_file, **kwargs):  # pylint: disable=unused-argument
+    """Normalizes the isla meta data file to TTS format
+    !pip install -q gdown
+    !gdown 1H6aqdGP-h-MT7XAVk870Ql4d3QrJT-7o -O isla.zip
+    # 3. Tạo các thư mục đích
+    !mkdir -p /content/dataset/wavs
+    !mkdir -p /content/dataset/tmp_unzip
+
+    # 4. Giải nén toàn bộ vào thư mục tạm
+    !unzip -q isla.zip -d /content/dataset/tmp_unzip
+
+    # 5. Di chuyển file .wav vào /wavs
+    !find /content/dataset/tmp_unzip -type f -iname "*.wav" -exec mv {} /content/dataset/wavs/ \;
+
+    # 6. Di chuyển các file còn lại vào /dataset
+    !find /content/dataset/tmp_unzip -type f ! -iname "*.wav" -exec mv {} /content/dataset/ \;
+
+    # 7. Xoá thư mục tạm
+    !rm -rf /content/dataset/tmp_unzip"""
+    txt_file = os.path.join(root_path, meta_file)
+    items = []
+    speaker_name = "ljspeech"
+    with open(txt_file, "r", encoding="utf-8") as ttf:
+        for line in ttf:
+            cols = line.split("|")
+            wav_file = os.path.join(root_path, "wavs", cols[0] + ".wav")
+            text = cols[2]
+            items.append({"text": text, "audio_file": wav_file, "speaker_name": speaker_name, "root_path": root_path})
+    return items
+
 
 def ljspeech_test(root_path, meta_file, **kwargs):  # pylint: disable=unused-argument
     """Normalizes the LJSpeech meta data file for TTS testing

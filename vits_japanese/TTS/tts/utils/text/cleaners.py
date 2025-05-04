@@ -6,11 +6,13 @@ import re
 from anyascii import anyascii
 
 from TTS.tts.utils.text.chinese_mandarin.numbers import replace_numbers_to_characters_in_text
+from TTS.tts.utils.text.japanese.phonemizer import japanese_text_to_phonemes
 
 from .english.abbreviations import abbreviations_en
 from .english.number_norm import normalize_numbers as en_normalize_numbers
 from .english.time_norm import expand_time_english
 from .french.abbreviations import abbreviations_fr
+from TTS.tts.utils.text.phonemizers.ja_jp_phonemizer import JA_JP_Phonemizer
 
 # Regular expression matching whitespace:
 _whitespace_re = re.compile(r"\s+")
@@ -155,6 +157,10 @@ def chinese_mandarin_cleaners(text: str) -> str:
     text = replace_numbers_to_characters_in_text(text)
     return text
 
+def ja_jp_phonemizer(text: str) -> str:
+    """Basic pipeline for japanese"""
+    text = japanese_text_to_phonemes(text)
+    return text
 
 def multilingual_cleaners(text):
     """Pipeline for multilingual text"""
