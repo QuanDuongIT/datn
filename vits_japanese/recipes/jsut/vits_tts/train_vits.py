@@ -12,14 +12,15 @@ from TTS.utils.audio import AudioProcessor
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epochs", required=True, help="Path to epochs.")
+    parser.add_argument("--epochs", required=True, help="Number of training epochs.")
     parser.add_argument("--metadata", required=True, help="Path to metadata CSV file.")
     parser.add_argument("--output_path", required=True, help="Path to output directory.")
     parser.add_argument("--restore_path", required=False, default=None, help="Path to pretrained model .pth file (optional).")
+    parser.add_argument("--continue_path", required=False, default=None, help="Path to continue training from previous folder.")
     args = parser.parse_args()
 
     dataset_config = BaseDatasetConfig(
-        formatter="isla",
+        formatter="kokoro",
         meta_file_train=args.metadata,
         path=os.path.join(args.output_path, "")
     )
@@ -42,7 +43,7 @@ def main():
     config = VitsConfig(
         model_args=vitsArgs,
         audio=audio_config,
-        run_name="vits_isla",
+        run_name="vits_jsut",
         use_speaker_embedding=False,
         batch_size=32,
         eval_batch_size=16,
@@ -100,13 +101,16 @@ def main():
     tokenizer, config = TTSTokenizer.init_from_config(config)
     model = Vits(config, ap, tokenizer)
 
-    # Tùy chọn khôi phục model từ checkpoint
-    if args.restore_path and os.path.exists(args.restore_path):
+    # Chọn logic giữa continue và restore
+    if args.continue_path and os.path.isdir(args.continue_path):
+        trainer_args = TrainerArgs(continue_path=args.continue_path)
+        print(f"[INFO] Continuing training from folder: {args.continue_path}")
+    elif args.restore_path and os.path.exists(args.restore_path):
         trainer_args = TrainerArgs(restore_path=args.restore_path)
-        print(f"[INFO] Restoring model from {args.restore_path}")
+        print(f"[INFO] Restoring model from checkpoint: {args.restore_path}")
     else:
         trainer_args = TrainerArgs()
-        print("[INFO] No restore_path provided. Training from scratch.")
+        print("[INFO] No checkpoint provided. Training from scratch.")
 
     trainer = Trainer(
         trainer_args, config, args.output_path, model=model, train_samples=train_samples, eval_samples=eval_samples
