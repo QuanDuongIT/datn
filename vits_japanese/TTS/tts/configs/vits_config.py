@@ -170,6 +170,11 @@ class VitsConfig(BaseTTSConfig):
     d_vector_file: List[str] = None
     d_vector_dim: int = None
 
+    # Save and evaluation parameters
+    save_step: int = field(default=10000, metadata={"help": "Số bước giữa các lần lưu mô hình."})
+    eval_step: int = field(default=1000, metadata={"help": "Số bước giữa các lần đánh giá mô hình."})
+    save_n_checkpoints: int = field(default=1, metadata={"help": "Số lượng checkpoint cần lưu lại."})
+
     def __post_init__(self):
         for key, val in self.model_args.items():
             if hasattr(self, key):
