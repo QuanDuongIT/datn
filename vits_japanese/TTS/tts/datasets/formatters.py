@@ -223,7 +223,7 @@ def isla(root_path, meta_file, **kwargs):  # pylint: disable=unused-argument
     !rm -rf /content/dataset/tmp_unzip"""
     txt_file = os.path.join(root_path, meta_file)
     items = []
-    speaker_name = "ljspeech"
+    speaker_name = "kokoro"
     with open(txt_file, "r", encoding="utf-8") as ttf:
         for line in ttf:
             cols = line.split("|")

@@ -12,6 +12,7 @@ from TTS.utils.audio import AudioProcessor
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", required=True, help="Path to epochs.")
     parser.add_argument("--metadata", required=True, help="Path to metadata CSV file.")
     parser.add_argument("--output_path", required=True, help="Path to output directory.")
     parser.add_argument("--restore_path", required=False, default=None, help="Path to pretrained model .pth file (optional).")
@@ -20,7 +21,7 @@ def main():
     dataset_config = BaseDatasetConfig(
         formatter="isla",
         meta_file_train=args.metadata,
-        path=os.path.join(args.output_path, "wavs")
+        path=os.path.join(args.output_path, "")
     )
 
     audio_config = VitsAudioConfig(
@@ -50,7 +51,7 @@ def main():
         num_eval_loader_workers=4,
         run_eval=True,
         test_delay_epochs=-1,
-        epochs=1,
+        epochs=args.epochs,
         text_cleaner="ja_jp_phonemizer",
         use_phonemes=True,
         phoneme_language="ja-jp",
