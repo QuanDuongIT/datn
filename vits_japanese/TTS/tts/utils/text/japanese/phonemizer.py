@@ -306,6 +306,40 @@ _CONVRULES = [
     "・/ ,",
 ]
 
+_FALLBACK_YOMI = {
+    # Ký tự đặc biệt
+    "々": "",       # lặp lại
+
+    # Katakana nhỏ (giữ nguyên để xử lý sau)
+    "ャ": "ャ",
+    "ュ": "ュ",
+    "ョ": "ョ",
+
+    # Các ký tự không thể phân tích tự động
+    "勃": "ボツ",
+    "噛": "カ",
+    "珂": "カ",
+    "結": "ケツ",
+    "自": "ジ",
+    "是": "ゼ",
+    "蛇": "ジャ",
+    "醸": "ジョウ",
+    "逓": "テイ",
+    "闘": "トウ",
+    "抽": "チュウ",
+    "慎": "シン",
+    "煖": "ダン",
+    "療": "リョウ",
+    "孺": "ジュ",
+    "聚": "シュウ",
+    "熏": "クン",
+    "分": "ブン",
+    "騎": "キ",
+    "溶": "ヨウ",
+    "禕": "イ",
+}
+
+
 _COLON_RX = re.compile(":+")
 _REJECT_RX = re.compile("[^ a-zA-Z:,.?]")
 
@@ -321,6 +355,13 @@ _RULEMAP1, _RULEMAP2 = _makerulemap()
 def kata2phoneme(text: str) -> str:
     """Convert katakana text to phonemes."""
     text = text.strip()
+    # fallback map cho các Katakana nhỏ rời
+    _RULEMAP1.update({
+        "ャ": "a",
+        "ュ": "u",
+        "ョ": "o"
+    })
+
     res = ""
     while text:
         if len(text) >= 2:
@@ -358,24 +399,48 @@ _TAGGER = MeCab.Tagger()
 def text2kata(text: str) -> str:
     parsed = _TAGGER.parse(text)
     res = []
+
     for line in parsed.split("\n"):
         if line == "EOS":
             break
         parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        word = parts[0]
+        yomi = parts[1] if len(parts) > 1 else ""
 
-        word, yomi = parts[0], parts[1]
-        if yomi:
-            res.append(yomi)
+        # Nếu toàn bộ từ nằm trong fallback
+        if word in _FALLBACK_YOMI:
+            res.append(_FALLBACK_YOMI[word])
+            continue
+
+        # Nếu MeCab không đưa ra yomi, thay từng ký tự
+        if not yomi or yomi == word:
+            for char in word:
+                if char in _FALLBACK_YOMI:
+                    res.append(_FALLBACK_YOMI[char])
+                elif char in _SYMBOL_TOKENS:
+                    res.append(char)
+                elif char in _NO_YOMI_TOKENS:
+                    continue
+                else:
+                    # fallback giữ nguyên ký tự nếu không biết
+                    res.append(char)
+            continue
+
+        res.append(yomi)
+
+    katakana = hira2kata("".join(res))
+
+    # Lọc lại toàn bộ để thay thế bất kỳ ký tự fallback nào bị sót
+    final = ""
+    for char in katakana:
+        if char in _FALLBACK_YOMI:
+            final += _FALLBACK_YOMI[char]
         else:
-            if word in _SYMBOL_TOKENS:
-                res.append(word)
-            elif word in ("っ", "ッ"):
-                res.append("ッ")
-            elif word in _NO_YOMI_TOKENS:
-                pass
-            else:
-                res.append(word)
-    return hira2kata("".join(res))
+            final += char
+
+    return final
 
 
 _ALPHASYMBOL_YOMI = {
@@ -459,9 +524,17 @@ def japanese_convert_numbers_to_words(text: str) -> str:
 def japanese_convert_alpha_symbols_to_words(text: str) -> str:
     return "".join([_ALPHASYMBOL_YOMI.get(ch, ch) for ch in text.lower()])
 
+# Định nghĩa một hàm để xử lý văn bản, loại bỏ các ký tự không hỗ trợ
+def preprocess_text_for_julius(text: str) -> str:
+    # Loại bỏ các ký tự như dấu ngoặc đơn và các ký tự khác không hợp lệ
+    text = re.sub(r"[()]", "", text)  # Loại bỏ dấu ngoặc đơn
+    # Bạn có thể thêm các ký tự không mong muốn khác vào biểu thức chính quy này nếu cần
+    return text
+
 
 def japanese_text_to_phonemes(text: str) -> str:
     """Convert Japanese text to phonemes."""
+    text = preprocess_text_for_julius(text)
     res = unicodedata.normalize("NFKC", text)
     res = japanese_convert_numbers_to_words(res)
     res = japanese_convert_alpha_symbols_to_words(res)

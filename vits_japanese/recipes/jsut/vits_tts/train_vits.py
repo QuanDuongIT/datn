@@ -20,9 +20,9 @@ def main():
     args = parser.parse_args()
 
     dataset_config = BaseDatasetConfig(
-        formatter="kokoro",
+        formatter="jsut",
         meta_file_train=args.metadata,
-        path=os.path.join(args.output_path, "")
+        path=os.path.dirname(args.metadata)
     )
 
     audio_config = VitsAudioConfig(
