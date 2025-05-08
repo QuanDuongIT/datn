@@ -8,6 +8,9 @@ import subprocess
 import numpy as np
 from scipy.io.wavfile import read
 import torch
+from export_onnx import export_onnx_model
+from pathlib import Path
+import re
 
 MATPLOTLIB_FLAG = False
 
@@ -63,7 +66,17 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
         },
         checkpoint_path,
     )
+    # Check if this is a generator checkpoint
+    checkpoint_path = Path(checkpoint_path)
+    if re.match(r"G_\d+\.pth", checkpoint_path.name):
+        config_path = checkpoint_path.parent / "config.json"
+        onnx_output_path = checkpoint_path.with_suffix(".onnx")
 
+        if config_path.exists():
+            logger.info(f"Exporting ONNX model to {onnx_output_path}")
+            export_onnx_model(checkpoint_path, config_path, onnx_output_path)
+        else:
+            logger.warning(f"Config file not found at {config_path}, skipping ONNX export.")
 
 def summarize(
     writer,
