@@ -44,3 +44,17 @@ def Audio_sampling_rate_matrix(root_path,matrix,target_sr):
         for j in range(len(matrix[i])):
             Audio_sampling_rate(matrix[i][j],target_sr)
 
+def Audio_sampling_rate_jsut(root_path, target_sr):
+    def find_folders_with_transcript(base_path):
+        folders = set()
+        for root, dirs, files in os.walk(base_path):
+            if 'transcript_utf8.txt' in files:
+                folders.add(root)
+        return sorted(folders)
+
+    folders = find_folders_with_transcript(root_path)
+
+    for folder in folders:
+        input_dir = os.path.join(folder, "wav")
+        output_dir = os.path.join(folder, "wav_22050")
+        Audio_sampling_rate_folder(target_sr, input_dir, output_dir)

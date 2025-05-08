@@ -116,3 +116,47 @@ def process_and_split_text(inpath, outdir, seed=42):
     print(f" - Train: {len(train_lines)} dòng")
     print(f" - Val:   {len(val_lines)} dòng")
     print(f" - Test:  {len(test_lines)} dòng")
+
+def process_and_split_text_jsut(inpath, outdir, seed=42):
+    os.makedirs(outdir, exist_ok=True)
+
+    valid_lines = []
+    with open(inpath, "r", encoding="utf-8-sig") as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if not line or '|' not in line:
+                continue  # Bỏ qua dòng rỗng hoặc không có '|'
+            parts = line.split('|')
+            if len(parts) < 2 or not parts[0].strip() or not parts[1].strip():
+                continue  # Bỏ qua dòng thiếu thông tin file hoặc text
+            # Đổi đường dẫn đầu vào
+            line = line.replace("jsut_ver/", "DUMMY1/")
+            line = line.replace("/wav", "/wav_22050")
+            valid_lines.append(line)
+
+    total = len(valid_lines)
+    if total == 0:
+        print("⚠️ Không có dòng hợp lệ nào để xử lý.")
+        return
+
+    random.seed(seed)
+    random.shuffle(valid_lines)
+
+    train_end = int(total * 0.8)
+    val_end = train_end + int(total * 0.199)
+
+    train_lines = valid_lines[:train_end]
+    val_lines = valid_lines[train_end:val_end]
+    test_lines = valid_lines[val_end:]
+
+    with open(os.path.join(outdir, f"{audioname}_train_filelist.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(train_lines) + "\n")
+    with open(os.path.join(outdir, f"{audioname}_val_filelist.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(val_lines) + "\n")
+    with open(os.path.join(outdir, f"{audioname}_test_filelist.txt"), "w", encoding="utf-8") as f:
+        f.write("\n".join(test_lines) + "\n")
+
+    print(f"✅ Đã xử lý {total} dòng hợp lệ:")
+    print(f" - Train: {len(train_lines)} dòng")
+    print(f" - Val:   {len(val_lines)} dòng")
+    print(f" - Test:  {len(test_lines)} dòng")
