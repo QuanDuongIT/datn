@@ -9,8 +9,30 @@ import utils
 from text import text_to_sequence
 import textwrap
 import os
+import re
+from tqdm import tqdm
 from pydub import AudioSegment
-from tqdm import tqdm 
+
+def split_text_by_sentences(text, max_chars=200):
+    # Tách câu bằng dấu chấm, dấu hỏi, hoặc dấu cảm thán
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    
+    # Gom các câu lại thành đoạn không vượt quá max_chars
+    chunks = []
+    current_chunk = ""
+
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) + 1 <= max_chars:
+            current_chunk += " " + sentence if current_chunk else sentence
+        else:
+            if current_chunk:
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence
+
+    if current_chunk:
+        chunks.append(current_chunk.strip())
+
+    return chunks
 
 def get_text(text, hps):
     text_norm = text_to_sequence(text, hps.data.text_cleaners)
@@ -67,7 +89,9 @@ def infer_onnx(text, model_path, config_path, output_path, sid=None, providers=N
 def infer_long_text(content, model_path, config_path, output_path, sid=None, providers=None):
     # Chia nội dung thành các đoạn ngắn hơn (ví dụ: mỗi đoạn 200 ký tự)
     start_time = time.time()  # Bắt đầu đo thời gian
-    chunks = textwrap.wrap(content, width=200)
+    
+    # Chia nội dung thành các đoạn theo câu, mỗi đoạn tối đa 200 ký tự
+    chunks = split_text_by_sentences(content, max_chars=200)
 
     # Tạo một đối tượng AudioSegment trống để ghép các đoạn âm thanh
     final_audio = AudioSegment.empty()
