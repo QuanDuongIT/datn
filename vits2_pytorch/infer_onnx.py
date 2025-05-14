@@ -7,7 +7,10 @@ import time
 import commons
 import utils
 from text import text_to_sequence
-
+import textwrap
+import os
+from pydub import AudioSegment
+from tqdm import tqdm 
 
 def get_text(text, hps):
     text_norm = text_to_sequence(text, hps.data.text_cleaners)
@@ -57,10 +60,45 @@ def infer_onnx(text, model_path, config_path, output_path, sid=None, providers=N
     
     end_time = time.time()  # Kết thúc đo thời gian
     duration = end_time - start_time  # Tổng thời gian
-    print(f"⏱️ Time taken for synthesis: {duration:.2f} seconds")
+    # print(f"⏱️ Time taken for synthesis: {duration:.2f} seconds")
     
     return output_path
 
+def infer_long_text(content, model_path, config_path, output_path, sid=None, providers=None):
+    # Chia nội dung thành các đoạn ngắn hơn (ví dụ: mỗi đoạn 200 ký tự)
+    start_time = time.time()  # Bắt đầu đo thời gian
+    chunks = textwrap.wrap(content, width=200)
+
+    # Tạo một đối tượng AudioSegment trống để ghép các đoạn âm thanh
+    final_audio = AudioSegment.empty()
+
+    # Duyệt qua từng đoạn văn bản và hiển thị thanh tiến trình
+    for i, chunk in tqdm(enumerate(chunks), total=len(chunks), desc="Synthesis Progress", unit="chunk"):
+        # Đặt tên tạm thời cho các tệp âm thanh
+        temp_path = f"audio_part_{i}.wav"
+        
+        # Gọi hàm infer_onnx để tạo âm thanh từ đoạn văn bản
+        infer_onnx(
+            text=chunk,
+            model_path=model_path,
+            config_path=config_path,
+            output_path=temp_path,
+            sid=sid,
+            providers=providers
+        )
+        
+        # Thêm âm thanh từ đoạn vừa tạo vào final_audio
+        final_audio += AudioSegment.from_wav(temp_path)
+        
+        # Xóa tệp âm thanh tạm thời sau khi sử dụng
+        os.remove(temp_path)
+
+    # Xuất kết quả cuối cùng ra tệp WAV
+    final_audio.export(output_path, format="wav")
+    end_time = time.time()  # Kết thúc đo thời gian
+    duration = end_time - start_time  # Tổng thời gian
+    print(f"⏱️ Time taken for synthesis: {duration:.2f} seconds")
+    print(f"Final audio saved at: {output_path}")
 
 def main():
     parser = argparse.ArgumentParser()

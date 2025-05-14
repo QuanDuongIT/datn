@@ -1,11 +1,11 @@
-from infer_onnx import infer_onnx
+from infer_onnx import infer_long_text
 import sys
 sys.path.append('../eval_asr') 
 from eval_audio import evaluate_tts_with_asr
 import IPython.display as ipd
 
 def synthesize_and_evaluate(
-    text,
+    text_path,
     model_path,
     config_path,
     audio_output_path="/content/audio.wav",
@@ -16,7 +16,7 @@ def synthesize_and_evaluate(
     Tổng hợp giọng nói từ văn bản và đánh giá bằng Whisper ASR.
 
     Args:
-        text (str): Văn bản đầu vào.
+        text_path (str): file Văn bản đầu vào.
         model_path (str): Đường dẫn đến mô hình ONNX.
         config_path (str): Đường dẫn đến file config.
         audio_output_path (str): File WAV sẽ được sinh ra.
@@ -26,9 +26,12 @@ def synthesize_and_evaluate(
     Returns:
         dict: Kết quả đánh giá bao gồm asr_text, phoneme gốc, phoneme asr, wer.
     """
+    with open(text_path, "r", encoding="utf-8") as file:
+      text = file.read()
+
     # Bước 1: Tổng hợp giọng nói
-    infer_onnx(
-        text=text,
+    infer_long_text(
+        content=text,
         model_path=model_path,
         config_path=config_path,
         output_path=audio_output_path
