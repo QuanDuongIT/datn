@@ -14,12 +14,12 @@ app = Flask(__name__)
 # Đổi route '/' để trả về index.html thay vì home.html
 @app.route('/')
 def home():
-    return render_template('index.html', model_id='model1', title='🎙️ VITS2 Japanese')
+    return render_template('index.html', model_id='model1', title='VITS Japanese')
 
 # Giữ lại chỉ trang cho model1
 @app.route('/vits2-japanese')
 def vits2_page():
-    return render_template('index.html', model_id='model1', title='🎙️ VITS2 Japanese')
+    return render_template('index.html', model_id='model1', title='VITS Japanese')
 
 # Xoá route cho model3 và model2
 
