@@ -15,7 +15,7 @@ from pydub import AudioSegment
 
 def split_text_by_sentences(text, max_chars=200):
     # Tách câu bằng dấu chấm, dấu hỏi, hoặc dấu cảm thán
-    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    sentences = re.split(r'(?<=[。！？.!?])\s*', text.strip())
     
     # Gom các câu lại thành đoạn không vượt quá max_chars
     chunks = []
@@ -91,7 +91,7 @@ def infer_long_text(content, model_path, config_path, output_path, sid=None, pro
     start_time = time.time()  # Bắt đầu đo thời gian
     
     # Chia nội dung thành các đoạn theo câu, mỗi đoạn tối đa 200 ký tự
-    chunks = split_text_by_sentences(content, max_chars=200)
+    chunks = split_text_by_sentences(content, max_chars=100)
 
     # Tạo một đối tượng AudioSegment trống để ghép các đoạn âm thanh
     final_audio = AudioSegment.empty()
