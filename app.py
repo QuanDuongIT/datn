@@ -3,36 +3,31 @@ import os
 import time
 from flask import Flask, request, jsonify, send_file, render_template
 
-# Import model modules
-sys.path.append(os.path.abspath('vits_japanese'))
-from vits_japanese.model_deployment import text_to_speech, init_synthesizer
-
 sys.path.append(os.path.abspath('vits2_pytorch'))
-from vits2_pytorch.infer_onnx import infer_onnx
+from vits2_pytorch.infer_onnx import infer_onnx, infer_long_text
+
+with open('example1.txt', "r", encoding="utf-8") as file:
+    content = file.read()
 
 app = Flask(__name__)
 
+# Đổi route '/' để trả về index.html thay vì home.html
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('index.html', model_id='model1', title='🎙️ VITS2 Japanese')
 
+# Giữ lại chỉ trang cho model1
 @app.route('/vits2-japanese')
 def vits2_page():
     return render_template('index.html', model_id='model1', title='🎙️ VITS2 Japanese')
 
-@app.route('/vits2-experimental')
-def vits2_experimental_page():
-    return render_template('index.html', model_id='model3', title='🧬 VITS2 Experimental')
-
-@app.route('/vits-old')
-def vits_old_page():
-    return render_template('index.html', model_id='model2', title='🧪 VITS Coqui/TTS')
+# Xoá route cho model3 và model2
 
 @app.route('/text-to-speech', methods=['POST'])
 def convert_text_to_speech():
     data = request.get_json()
     text = data.get('text')
-    model_id = data.get('model_id', 'model1')
+    model_id = data.get('model_id', 'model1')  # Mặc định model1
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
@@ -43,24 +38,15 @@ def convert_text_to_speech():
         print(f'Running model: {model_id}')
         start_time = time.time()
 
-        if model_id == 'model1':
-            infer_onnx(
-                text=text,
-                model_path="vits2_pytorch/model/G_15000.onnx",
-                config_path="vits2_pytorch/model/config.json",
+        if model_id == 'model1':  # Chỉ xử lý model1
+            infer_long_text(
+                content=text,
+                model_path="vits2_pytorch/models/G_32000.onnx",
+                config_path="vits2_pytorch/models/config.json",
                 output_path=out_path
             )
-        elif model_id == 'model3':
-            infer_onnx(
-                text=text,
-                model_path="vits2_pytorch/model/G_ms_10000.onnx",
-                config_path="vits2_pytorch/model/config_ms.json",
-                output_path=out_path,
-                sid=data.get('sid', None)
-            )
-        else:
-            synthesizer = init_synthesizer("model/best_model.pth", "model/config.json", use_cuda=False)
-            text_to_speech(text, out_path, synthesizer)
+
+        # Loại bỏ phần xử lý cho model3 và model2
 
         exec_time = round(time.time() - start_time, 2)
 

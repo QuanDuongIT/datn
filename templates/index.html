@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>{{ title }}</title>
+    <title>🎙️ VITS2 Japanese - Text-to-Speech</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 
@@ -42,7 +42,7 @@
     <div class="container">
         <div class="card shadow">
             <div class="card-body">
-                <h3 class="card-title mb-4">{{ title }} - Text-to-Speech</h3>
+                <h3 class="card-title mb-4">🎙️ VITS2 Japanese - Text-to-Speech</h3>
 
                 <form id="textToSpeechForm">
                     <div class="form-group">
@@ -51,18 +51,7 @@
                             placeholder="こんにちは！音声に変換してみましょう。"></textarea>
                     </div>
 
-                    <!-- 🔽 Speaker dropdown -->
-                    <div id="speakerSelect" class="form-group" style="display: none;">
-                        <label for="sid">Speaker ID (optional for model3):</label>
-                        <select class="form-control" id="sid">
-                            <option value="0">Speaker 0</option>
-                            <option value="1">Speaker 1</option>
-                            <option value="2">Speaker 2</option>
-                            <option value="3">Speaker 3</option>
-                        </select>
-                    </div>
-
-                    <input type="hidden" id="modelId" value="{{ model_id }}">
+                    <input type="hidden" id="modelId" value="model1">
 
                     <button type="submit" class="btn btn-primary">🔊 Convert to Speech</button>
                 </form>
@@ -89,17 +78,11 @@
 
     <script>
         $(document).ready(function () {
-            const modelId = $('#modelId').val();
-            if (modelId === 'model3') {
-                $('#speakerSelect').show();
-            }
-
             $('#textToSpeechForm').on('submit', function (event) {
                 event.preventDefault();
 
                 const text = $('#textInput').val().trim();
                 const modelId = $('#modelId').val();
-                const sid = $('#sid').val();
 
                 if (!text) {
                     Swal.fire({
@@ -114,9 +97,6 @@
                 $('#execTimeText').hide(); // Hide old result
 
                 const requestData = { text: text, model_id: modelId };
-                if (modelId === 'model3' && sid !== '') {
-                    requestData.sid = parseInt(sid);
-                }
 
                 $.ajax({
                     url: '/text-to-speech',

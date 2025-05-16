@@ -24,7 +24,7 @@ pandas
 matplotlib
 inflect
 jieba
-
+soundfile
 flask
 flask-swagger-ui
 
