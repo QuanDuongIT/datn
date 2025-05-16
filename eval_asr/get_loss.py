@@ -54,8 +54,18 @@ class LogAnalyzer:
             print(f"Checkpoint: {'(tồn tại)' if step in self.existing_ckpt_steps else '(đã xóa)'}")
             for tag in self.important_tags:
                 print(f"{tag}: {self.logs_dict[step].get(tag, '(no log at this step)')}")
+            
+            # Trả về dict các giá trị loss cần thiết
+            return {
+                "loss_g_total": self.logs_dict[step].get("loss/g/total", None),
+                "loss_d_total": self.logs_dict[step].get("loss/d/total", None),
+                "loss_mel": self.logs_dict[step].get("loss/g/mel", None),
+                "loss_fm": self.logs_dict[step].get("loss/g/fm", None),
+                "loss_g_kl": self.logs_dict[step].get("loss/g/kl", None),
+            }
         else:
             print(f"Không tìm thấy thông tin log cho step {step}")
+            return {"loss_total": None, "loss_mel": None, "loss_fm": None}
 
     def print_logs_from_dict(self):
         for step in self.all_logged_steps:

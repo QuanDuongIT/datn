@@ -31,71 +31,23 @@ def json_to_namespace(d):
         return d
 
 def split_text_by_sentences(text, max_chars=100):
-    """
-    Tách văn bản tiếng Nhật theo câu và ghép các câu liền kề sao cho mỗi đoạn có < max_chars ký tự.
+    # Tách câu bằng dấu chấm, dấu hỏi, hoặc dấu cảm thán
+    sentences = re.split(r'(?<=[。！？.!?])\s*', text.strip())
     
-    Args:
-        text (str): Văn bản đầu vào.
-        max_chars (int): Số ký tự tối đa trong mỗi đoạn.
-        
-    Returns:
-        List[str]: Danh sách các đoạn văn đã ghép.
-    """
-    # Tách câu theo dấu kết thúc
-    raw_sentences = re.split(r'(?<=[。！？!?])', text.strip())
-    sentences = [s.strip() for s in raw_sentences if s.strip()]
-    
+    # Gom các câu lại thành đoạn không vượt quá max_chars
     chunks = []
-    current_chunk = []
-    current_char_count = 0
+    current_chunk = ""
 
     for sentence in sentences:
-        char_count = len(sentence)
-        if current_char_count + char_count <= max_chars:
-            current_chunk.append(sentence)
-            current_char_count += char_count
+        if len(current_chunk) + len(sentence) + 1 <= max_chars:
+            current_chunk += " " + sentence if current_chunk else sentence
         else:
             if current_chunk:
-                chunks.append("".join(current_chunk))
-            current_chunk = [sentence]
-            current_char_count = char_count
+                chunks.append(current_chunk.strip())
+            current_chunk = sentence
 
     if current_chunk:
-        chunks.append("".join(current_chunk))
-
-    return chunks
-    """
-    Tách văn bản theo câu và ghép các câu liền kề sao cho mỗi đoạn có < max_words.
-    
-    Args:
-        text (str): Văn bản đầu vào.
-        max_words (int): Số từ tối đa trong mỗi đoạn (đếm theo khoảng trắng).
-        
-    Returns:
-        List[str]: Danh sách các đoạn văn đã ghép.
-    """
-    # Bước 1: Tách câu theo dấu câu kết thúc
-    raw_sentences = re.split(r'(?<=[。！？!?])', text.strip())
-    sentences = [s.strip() for s in raw_sentences if s.strip()]
-    
-    # Bước 2: Ghép các câu sao cho tổng số từ < max_words
-    chunks = []
-    current_chunk = []
-    current_word_count = 0
-
-    for sentence in sentences:
-        word_count = len(sentence.split())
-        if current_word_count + word_count <= max_words:
-            current_chunk.append(sentence)
-            current_word_count += word_count
-        else:
-            if current_chunk:
-                chunks.append(" ".join(current_chunk))
-            current_chunk = [sentence]
-            current_word_count = word_count
-
-    if current_chunk:
-        chunks.append(" ".join(current_chunk))
+        chunks.append(current_chunk.strip())
 
     return chunks
 
@@ -175,7 +127,7 @@ def infer_long_text(content, model_path, config_path, output_path, sid=None, pro
     start_time = time.time()  # Bắt đầu đo thời gian
     
     # Chia nội dung thành các đoạn theo câu, mỗi đoạn tối đa 200 ký tự
-    chunks = split_text_by_sentences(content, max_chars=300)
+    chunks = split_text_by_sentences(content, max_chars=500)
 
     temp_files = []
 
