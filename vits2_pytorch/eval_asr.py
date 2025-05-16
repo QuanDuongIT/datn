@@ -44,10 +44,11 @@ def synthesize_and_evaluate(
 
     # Đánh giá bằng Whisper
     result = evaluate_tts_with_asr(audio_output_path, text, whisper_model_size)
-
+    text_clean = text.strip().replace('\n', ' ')
+    
     # Hiển thị kết quả đánh giá
     print(f'\n| {whisper_model_size.upper()} |{"-"*80}')
-    print(f"Văn bản gốc                              : {text.strip().replace('\n', ' ')}")
+    print(f"Văn bản gốc                              : {text_clean}")
     print(f"Văn bản ASR                              : {result['asr_text']}")
     print(f"Phoneme gốc                              : {result['ground_truth_phonemes']}")
     print(f"Phoneme từ ASR                           : {result['asr_text_phonemes']}")
