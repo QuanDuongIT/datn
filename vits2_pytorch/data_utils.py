@@ -512,20 +512,38 @@ class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
         assert len(self.batches) * self.batch_size == self.num_samples
         return iter(self.batches)
 
+    # def _bisect(self, x, lo=0, hi=None):
+    #     if hi is None:
+    #         hi = len(self.boundaries) - 1
+
+    #     if hi > lo:
+    #         mid = (hi + lo) // 2
+    #         if self.boundaries[mid] < x and x <= self.boundaries[mid + 1]:
+    #             return mid
+    #         elif x <= self.boundaries[mid]:
+    #             return self._bisect(x, lo, mid)
+    #         else:
+    #             return self._bisect(x, mid + 1, hi)
+    #     else:
+    #         return -1
     def _bisect(self, x, lo=0, hi=None):
         if hi is None:
             hi = len(self.boundaries) - 1
 
-        if hi > lo:
+        if x <= self.boundaries[0]:
+            return 0  # Gán vào bucket đầu tiên
+        if x > self.boundaries[-1]:
+            return len(self.boundaries) - 2  # Gán vào bucket cuối cùng
+
+        while hi > lo:
             mid = (hi + lo) // 2
             if self.boundaries[mid] < x and x <= self.boundaries[mid + 1]:
                 return mid
             elif x <= self.boundaries[mid]:
-                return self._bisect(x, lo, mid)
+                hi = mid
             else:
-                return self._bisect(x, mid + 1, hi)
-        else:
-            return -1
+                lo = mid + 1
+        return -1
 
     def __len__(self):
         return self.num_samples // self.batch_size
