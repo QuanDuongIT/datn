@@ -71,23 +71,49 @@ class TextAudioLoader(torch.utils.data.Dataset):
         return (text, spec, wav)
 
     def get_audio(self, filename):
-        # TODO : if linear spec exists convert to mel from existing linear spec
+        # Load WAV file
         audio, sampling_rate = load_wav_to_torch(filename)
+        # print(f"[DEBUG] Raw audio max/min: {audio.max()} / {audio.min()}")
         if sampling_rate != self.sampling_rate:
             raise ValueError(
-                "{} SR doesn't match target {} SR for file: {}".format(
-                    sampling_rate, self.sampling_rate, filename
+                "{} {} SR doesn't match target {} SR".format(
+                    sampling_rate, self.sampling_rate
                 )
             )
-        audio_norm = audio / self.max_wav_value
+
+        # Normalize audio
+        # Tự động kiểm tra xem có cần chia không
+        if torch.max(torch.abs(audio)) <= 1.0:
+            # Đã chuẩn hóa rồi, không chia nữa
+            audio_norm = audio
+            # print("[INFO] Audio is already normalized (float32 in [-1, 1]), skipping division.")
+        else:
+            audio_norm = audio / self.max_wav_value
+            # print(f"[INFO] Normalizing audio with max_wav_value={self.max_wav_value}")
+
         audio_norm = audio_norm.unsqueeze(0)
+
+        # # Debug audio
+        # print(f"[DEBUG] Loaded audio: {filename}")
+        # print(f"[DEBUG] Raw audio shape: {audio.shape}, dtype: {audio.dtype}")
+        # print(f"[DEBUG] Normalized audio min/max: {audio_norm.min().item()} / {audio_norm.max().item()}")
+        # print(f"[DEBUG] Normalized audio shape: {audio_norm.shape}")
+
+        # Prepare .pt file path
         spec_filename = filename.replace(".wav", ".spec.pt")
         if self.use_mel_spec_posterior:
             spec_filename = spec_filename.replace(".spec.pt", ".mel.pt")
+
+        # Load or compute spectrogram
         if os.path.exists(spec_filename):
+            # print(f"[DEBUG] Loading cached spectrogram: {spec_filename}")
             spec = torch.load(spec_filename)
         else:
+            # print(f"[DEBUG] Computing spectrogram for: {filename}")
             if self.use_mel_spec_posterior:
+                # print("[DEBUG] Using mel_spectrogram_torch()")
+                # print(f"[DEBUG] Parameters -> filter_length: {self.filter_length}, hop_length: {self.hop_length}, win_length: {self.win_length}")
+                # print(f"[DEBUG] Sampling rate: {self.sampling_rate}, mel_fmin: {self.hparams.mel_fmin}, mel_fmax: {self.hparams.mel_fmax}")
                 spec = mel_spectrogram_torch(
                     audio_norm,
                     self.filter_length,
@@ -100,6 +126,7 @@ class TextAudioLoader(torch.utils.data.Dataset):
                     center=False,
                 )
             else:
+                # print("[DEBUG] Using spectrogram_torch()")
                 spec = spectrogram_torch(
                     audio_norm,
                     self.filter_length,
@@ -108,9 +135,23 @@ class TextAudioLoader(torch.utils.data.Dataset):
                     self.win_length,
                     center=False,
                 )
+
+            # # Debug spectrogram values
+            # print(f"[DEBUG] Mel Spectrogram shape: {spec.shape}")
+            # print(f"[DEBUG] Mel min/max: {spec.min().item()} / {spec.max().item()}")
+            # print(f"[DEBUG] Mel mean/std: {spec.mean().item()} / {spec.std().item()}")
+
+            # # Check for NaNs
+            # if torch.isnan(spec).any():
+            #     raise ValueError(f"[ERROR] NaN detected in spectrogram for file: {filename}")
+
+            # Save computed spectrogram
             spec = torch.squeeze(spec, 0)
+            # print(f"[DEBUG] Saving spectrogram to: {spec_filename}")
             torch.save(spec, spec_filename)
+
         return spec, audio_norm
+
 
     def get_text(self, text):
         if self.cleaned_text:
@@ -442,25 +483,51 @@ class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
 
     def _create_buckets(self):
         buckets = [[] for _ in range(len(self.boundaries) - 1)]
+
+        maxlength = 0
+        dropped = 0
         for i in range(len(self.lengths)):
             length = self.lengths[i]
             idx_bucket = self._bisect(length)
+            if length > maxlength:
+                maxlength = length
             if idx_bucket != -1:
                 buckets[idx_bucket].append(i)
+            else:
+                dropped += 1
+                print(f"[DROPPED] Sample index: {i}, Length: {length}")
+                print(f"  Reason: Not in any boundary interval: {self.boundaries}")
 
+        print("***** Max sample length:", maxlength)
+        print("***** Total dropped samples:", dropped)
+
+        # Gộp các bucket rỗng về bucket trước (nếu có)
         for i in range(len(buckets) - 1, 0, -1):
             if len(buckets[i]) == 0:
+                print(f"[WARNING] Bucket {i} is empty. Removing boundary: {self.boundaries[i+1]}")
                 buckets.pop(i)
                 self.boundaries.pop(i + 1)
 
+        # Tính số sample mỗi bucket (đã làm đầy để chia đều batch)
         num_samples_per_bucket = []
         for i in range(len(buckets)):
             len_bucket = len(buckets[i])
             total_batch_size = self.num_replicas * self.batch_size
-            rem = (
-                total_batch_size - (len_bucket % total_batch_size)
-            ) % total_batch_size
+            rem = (total_batch_size - (len_bucket % total_batch_size)) % total_batch_size
             num_samples_per_bucket.append(len_bucket + rem)
+
+        # In thông tin bucket sau khi phân chia
+        print("\n===== Bucket statistics =====")
+        for i, bucket in enumerate(buckets):
+            bucket_lengths = [self.lengths[idx] for idx in bucket]
+            if len(bucket_lengths) > 0:
+                avg_len = sum(bucket_lengths) / len(bucket_lengths)
+                print(f"Bucket {i}: Range ({self.boundaries[i]}, {self.boundaries[i+1]}] - {len(bucket)} samples - Avg frames: {avg_len:.2f}")
+            else:
+                print(f"Bucket {i}: Range ({self.boundaries[i]}, {self.boundaries[i+1]}] - EMPTY")
+
+        print("================================\n")
+
         return buckets, num_samples_per_bucket
 
     def __iter__(self):
@@ -512,38 +579,21 @@ class DistributedBucketSampler(torch.utils.data.distributed.DistributedSampler):
         assert len(self.batches) * self.batch_size == self.num_samples
         return iter(self.batches)
 
-    # def _bisect(self, x, lo=0, hi=None):
-    #     if hi is None:
-    #         hi = len(self.boundaries) - 1
-
-    #     if hi > lo:
-    #         mid = (hi + lo) // 2
-    #         if self.boundaries[mid] < x and x <= self.boundaries[mid + 1]:
-    #             return mid
-    #         elif x <= self.boundaries[mid]:
-    #             return self._bisect(x, lo, mid)
-    #         else:
-    #             return self._bisect(x, mid + 1, hi)
-    #     else:
-    #         return -1
     def _bisect(self, x, lo=0, hi=None):
         if hi is None:
             hi = len(self.boundaries) - 1
 
-        if x <= self.boundaries[0]:
-            return 0  # Gán vào bucket đầu tiên
-        if x > self.boundaries[-1]:
-            return len(self.boundaries) - 2  # Gán vào bucket cuối cùng
-
-        while hi > lo:
+        if hi > lo:
             mid = (hi + lo) // 2
             if self.boundaries[mid] < x and x <= self.boundaries[mid + 1]:
                 return mid
             elif x <= self.boundaries[mid]:
-                hi = mid
+                return self._bisect(x, lo, mid)
             else:
-                lo = mid + 1
-        return -1
+                return self._bisect(x, mid + 1, hi)
+        else:
+            return -1
+
 
     def __len__(self):
         return self.num_samples // self.batch_size

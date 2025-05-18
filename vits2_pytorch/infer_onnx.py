@@ -127,7 +127,7 @@ def infer_long_text(content, model_path, config_path, output_path, sid=None, pro
     start_time = time.time()  # Bắt đầu đo thời gian
     
     # Chia nội dung thành các đoạn theo câu, mỗi đoạn tối đa 200 ký tự
-    chunks = split_text_by_sentences(content, max_chars=500)
+    chunks = split_text_by_sentences(content, max_chars=300)
 
     temp_files = []
 

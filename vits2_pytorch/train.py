@@ -77,12 +77,12 @@ def run(rank, n_gpus, hps):
         print("Using lin posterior encoder for VITS1")
         posterior_channels = hps.data.filter_length // 2 + 1
         hps.data.use_mel_posterior_encoder = False
-
+    # cần tùy chỉnh boundaries trong config.json đối với jsut max(boundaries) chỉ cần đến  1000 với css10 là 2000
     train_dataset = TextAudioLoader(hps.data.training_files, hps.data)
     train_sampler = DistributedBucketSampler(
         train_dataset,
         hps.train.batch_size,
-        [32, 300, 400, 500, 600, 700, 800, 900, 1000],
+        hps.data.boundaries,
         num_replicas=n_gpus,
         rank=rank,
         shuffle=True,
