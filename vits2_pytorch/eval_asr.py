@@ -42,7 +42,7 @@ def synthesize_and_evaluate(
     print(f"Phoneme từ ASR      : {result['asr_text_phonemes']}")
     print(f"Word Error Rate     : {result['wer']*100:.2f}%")
 
-    log_dir = os.path.dirname(model_path)
+    log_dir = os.path.dirname(os.path.dirname(model_path))
     step = None
     loss_data = {
         "loss_g_total": None,
