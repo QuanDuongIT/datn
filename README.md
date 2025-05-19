@@ -26,3 +26,5 @@ python app.py
 
 The app will be available at:
 http://127.0.0.1:5000/
+
+[32, 300, 400, 500, 600, 700, 800, 900, 1000],

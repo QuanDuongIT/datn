@@ -70,7 +70,10 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, checkpoint_path)
     checkpoint_path = Path(checkpoint_path)
     if re.match(r"G_\d+\.pth", checkpoint_path.name):
         config_path = checkpoint_path.parent / "config.json"
-        onnx_output_path = checkpoint_path.with_suffix(".onnx")
+
+        export_dir = checkpoint_path.parent / "export_onnx"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        onnx_output_path = export_dir / checkpoint_path.with_suffix(".onnx").name
 
         if config_path.exists():
             logger.info(f"Exporting ONNX model to {onnx_output_path}")
@@ -117,8 +120,8 @@ def latest_checkpoint_path(dir_path, regex="G_*.pth"):
 def remove_old_checkpoints(cp_dir, prefixes=['G_*.pth', 'D_*.pth', 'DUR_*.pth']):
     for prefix in prefixes:
         sorted_ckpts = scan_checkpoint(cp_dir, prefix)
-        if sorted_ckpts and len(sorted_ckpts) > 3:
-            for ckpt_path in sorted_ckpts[:-3]:
+        if sorted_ckpts and len(sorted_ckpts) > 2:
+            for ckpt_path in sorted_ckpts[:-2]:
                 os.remove(ckpt_path)
                 print("removed {}".format(ckpt_path))
 

@@ -36,7 +36,21 @@
         "mel_fmax": null,
         "add_blank": false,
         "n_speakers": 0,
-        "cleaned_text": true
+        "cleaned_text": true,
+        "boundaries": [
+            32,
+            600,
+            800,
+            1000,
+            1100,
+            1200,
+            1300,
+            1400,
+            1500,
+            1600,
+            1700,
+            1800
+        ]
     },
     "model": {
         "use_mel_posterior_encoder": true,
