@@ -69,17 +69,44 @@ def synthesize_and_evaluate(
         csv_path = os.path.join(log_dir, "metrics.csv")
 
     if step is not None:
-        file_exists = os.path.exists(csv_path)
-        with open(csv_path, mode='a', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ["step", "wer"] + list(loss_data.keys())
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            if not file_exists:
-                writer.writeheader()
-            writer.writerow({
+        fieldnames = ["step", "wer"] + list(loss_data.keys())
+        rows = []
+
+        # Đọc nội dung hiện có (nếu có)
+        if os.path.exists(csv_path):
+            with open(csv_path, mode='r', newline='', encoding='utf-8') as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    if int(row["step"]) == step:
+                        # Cập nhật dòng hiện tại
+                        row = {
+                            "step": step,
+                            "wer": result["wer"],
+                            **loss_data
+                        }
+                    rows.append(row)
+        else:
+            # Nếu chưa có file, thêm dòng mới
+            rows.append({
                 "step": step,
                 "wer": result["wer"],
                 **loss_data
             })
+
+        # Kiểm tra nếu step chưa có trong file (không bị ghi đè)
+        if not any(int(r["step"]) == step for r in rows):
+            rows.append({
+                "step": step,
+                "wer": result["wer"],
+                **loss_data
+            })
+
+        # Ghi lại toàn bộ file
+        with open(csv_path, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for row in rows:
+                writer.writerow(row)
 
     return {
         **result,
