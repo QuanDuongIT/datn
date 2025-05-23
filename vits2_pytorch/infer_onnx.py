@@ -75,7 +75,7 @@ def infer_onnx(text, model_path, config_path, output_path, sid=None, providers=N
     model = onnxruntime.InferenceSession(
         str(model_path),
         sess_options=sess_options,
-        providers=providers or ["CPUExecutionProvider"]
+        providers=providers or ( ["CUDAExecutionProvider"] if "CUDAExecutionProvider" in onnxruntime.get_available_providers() else ["CPUExecutionProvider"])
     )
     hps = get_hparams_from_file(config_path)
     # hps = utils.get_hparams_from_file(config_path)
@@ -127,7 +127,7 @@ def infer_long_text(content, model_path, config_path, output_path, sid=None, pro
     start_time = time.time()  # Bắt đầu đo thời gian
     
     # Chia nội dung thành các đoạn theo câu, mỗi đoạn tối đa 200 ký tự
-    chunks = split_text_by_sentences(content, max_chars=300)
+    chunks = split_text_by_sentences(content, max_chars=250)
 
     temp_files = []
 
