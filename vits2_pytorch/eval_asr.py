@@ -7,6 +7,8 @@ sys.path.append('../eval_asr')
 from eval_audio import evaluate_tts_with_asr
 import IPython.display as ipd
 from get_loss import LogAnalyzer
+import pandas as pd
+import matplotlib.pyplot as plt
 
 def synthesize_and_evaluate(
     text_path,
@@ -149,4 +151,36 @@ def evaluate_all_checkpoints(
             config_path=config_path,
             whisper_model_size=whisper_model_size
         )
+
+def plot_metrics(csv_path):
+    # Đọc dữ liệu từ CSV
+    df = pd.read_csv(csv_path)
+    df = df.sort_values(by="step")  # Sắp xếp theo step
+
+    # Tạo biểu đồ
+    fig, ax1 = plt.subplots(figsize=(12, 6))
+
+    # Trục Y bên trái: các loss
+    ax1.set_xlabel('Checkpoint (step)')
+    ax1.set_ylabel('Loss values', color='tab:blue')
+
+    loss_keys = ["loss_g_total", "loss_d_total", "loss_mel", "loss_fm", "loss_g_kl"]
+    for loss in loss_keys:
+        if loss in df.columns:
+            ax1.plot(df["step"], df[loss], label=loss)
+
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax1.legend(loc='upper left')
+
+    # Trục Y bên phải: WER
+    ax2 = ax1.twinx()
+    ax2.set_ylabel('WER (%)', color='tab:red')
+    ax2.plot(df["step"], df["wer"] * 100, 'o-', color='tab:red', label='WER')
+    ax2.tick_params(axis='y', labelcolor='tab:red')
+    ax2.legend(loc='upper right')
+
+    plt.title('Training Metrics by Checkpoint')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
