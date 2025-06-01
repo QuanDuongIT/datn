@@ -1,4 +1,6 @@
-<!-- điều kiện triển khai python 3.9 -->
+<!-- điều kiện triển khai trên vs code, python 3.9 -->
+0. Training
+Có thể train model bằng dataset khác theo file code training_vits.ipynb
 
 1. Create a Virtual Environment
 <!-- To create an isolated Python environment, run the following command: -->
@@ -7,8 +9,9 @@ python -m venv venv
 2. Activate the Virtual Environment
 <!-- Once the virtual environment is created, activate it using the following command: -->
 .\venv\Scripts\activate
+<!-- deactivate để ngắt -->
 
-3. Configure Model Path(có thể chung 1 config khi chỉ triển khai)
+3. Dowload and Configure Model Path(có thể chung 1 config khi chỉ triển khai)
 mkdir vits2_pytorch/models
 cd vits2_pytorch/models
 <!-- dowload css10 model checkpoit G_12000 link: https://drive.google.com/file/d/10LPmH50a-vidAPviSL7stkW6zTFlEcWY/view?usp=sharing
@@ -24,7 +27,8 @@ gdown --id 116jnKove3n6EtUWNTTmG_RolQLQp1vWu
 
 4. Install Required Libraries
 <!-- Install the necessary Python dependencies by running: -->
-cd /datn        
+<!-- cd vào folder /datn để cài requirements.txttxt -->
+cd ../../        
 pip install -r requirements.txt
 
 5. Run the Application
