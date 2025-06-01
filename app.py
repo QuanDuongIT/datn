@@ -36,9 +36,9 @@ def convert_text_to_speech():
         if model_id == 'model1':
             # Chọn model tương ứng với giọng
             if voice == 'female':
-                model_path = "vits2_pytorch/models/G_32000.onnx"
+                model_path = "vits2_pytorch/models/G_30000.onnx"
             elif voice == 'male':
-                model_path = "vits2_pytorch/models/G_5000.onnx"
+                model_path = "vits2_pytorch/models/G_12000.onnx"
             else:
                 return jsonify({"error": "Unsupported voice type."}), 400
 

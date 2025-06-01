@@ -12,7 +12,7 @@ import os
 import re
 from tqdm import tqdm
 import soundfile as sf 
-
+import uuid
 import json
 from types import SimpleNamespace
 
@@ -138,7 +138,8 @@ def infer_long_text(content, model_path, config_path, output_path, sid=None, pro
     # Duyệt qua từng đoạn văn bản và hiển thị thanh tiến trình
     for i, chunk in tqdm(enumerate(chunks), total=len(chunks), desc="Synthesis Progress", unit="chunk"):
         # Đặt tên tạm thời cho các tệp âm thanh
-        temp_path = f"audio_part_{i}.wav"
+        unique_id = str(uuid.uuid4())
+        temp_path = f"audio_part_{unique_id}_{i}.wav"
         
         # Gọi hàm infer_onnx để tạo âm thanh từ đoạn văn bản
         infer_onnx(
@@ -164,6 +165,7 @@ def infer_long_text(content, model_path, config_path, output_path, sid=None, pro
     duration = end_time - start_time  # Tổng thời gian
     print(f"⏱️ Time taken for synthesis: {duration:.2f} seconds")
     print(f"Final audio saved at: {output_path}")
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="Path to model (.onnx)")

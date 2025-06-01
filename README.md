@@ -1,23 +1,30 @@
-Project Setup Instructions
-Follow the steps below to set up and run the project coqui-ai/TTS vits:
+<!-- điều kiện triển khai python 3.9 -->
 
-1. Configure Model Path
-Before running the application, make sure to set the model path and config path correctly in your application. You can configure the paths in the relevant part of your code:
-# Configuring model and configuration file paths in app.py
-
-model_path = "model/best_model.pth"
-config_path = "model/config.json"
-
-2. Create a Virtual Environment
-To create an isolated Python environment, run the following command:
+1. Create a Virtual Environment
+<!-- To create an isolated Python environment, run the following command: -->
 python -m venv venv
 
-3. Activate the Virtual Environment
-Once the virtual environment is created, activate it using the following command:
+2. Activate the Virtual Environment
+<!-- Once the virtual environment is created, activate it using the following command: -->
 .\venv\Scripts\activate
 
+3. Configure Model Path(có thể chung 1 config khi chỉ triển khai)
+mkdir vits2_pytorch/models
+cd vits2_pytorch/models
+<!-- dowload css10 model checkpoit G_12000 link: https://drive.google.com/file/d/10LPmH50a-vidAPviSL7stkW6zTFlEcWY/view?usp=sharing
+    dowload css10 config checkpoit G_12000 link: https://drive.google.com/file/d/1-Fq5cjaGY_OaBovaKvqkOZieFkapbUks/view?usp=sharing
+    dowload jsut model checkpoit G_12000 link: https://drive.google.com/file/d/12H0e0Q9ovycNqpfmOUxOlZ5FK1Ly5vr3/view?usp=sharing
+    dowload jsut config checkpoit G_12000 link: https://drive.google.com/file/d/116jnKove3n6EtUWNTTmG_RolQLQp1vWu/view?usp=sharing
+ -->
+pip install gdown
+gdown --id 10LPmH50a-vidAPviSL7stkW6zTFlEcWY
+gdown --id 1-Fq5cjaGY_OaBovaKvqkOZieFkapbUks
+gdown --id 12H0e0Q9ovycNqpfmOUxOlZ5FK1Ly5vr3
+gdown --id 116jnKove3n6EtUWNTTmG_RolQLQp1vWu
+
 4. Install Required Libraries
-Install the necessary Python dependencies by running:
+<!-- Install the necessary Python dependencies by running: -->
+cd /datn        
 pip install -r requirements.txt
 
 5. Run the Application
@@ -26,5 +33,3 @@ python app.py
 
 The app will be available at:
 http://127.0.0.1:5000/
-
-[32, 300, 400, 500, 600, 700, 800, 900, 1000],
