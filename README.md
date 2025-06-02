@@ -16,8 +16,8 @@ mkdir vits2_pytorch/models
 cd vits2_pytorch/models
 <!-- dowload css10 model checkpoit G_12000 link: https://drive.google.com/file/d/10LPmH50a-vidAPviSL7stkW6zTFlEcWY/view?usp=sharing
     dowload css10 config checkpoit G_12000 link: https://drive.google.com/file/d/1-Fq5cjaGY_OaBovaKvqkOZieFkapbUks/view?usp=sharing
-    dowload jsut model checkpoit G_12000 link: https://drive.google.com/file/d/12H0e0Q9ovycNqpfmOUxOlZ5FK1Ly5vr3/view?usp=sharing
-    dowload jsut config checkpoit G_12000 link: https://drive.google.com/file/d/116jnKove3n6EtUWNTTmG_RolQLQp1vWu/view?usp=sharing
+    dowload jsut model checkpoit G_30000 link: https://drive.google.com/file/d/12H0e0Q9ovycNqpfmOUxOlZ5FK1Ly5vr3/view?usp=sharing
+    dowload jsut config checkpoit G_30000 link: https://drive.google.com/file/d/116jnKove3n6EtUWNTTmG_RolQLQp1vWu/view?usp=sharing
  -->
 pip install gdown
 gdown --id 10LPmH50a-vidAPviSL7stkW6zTFlEcWY
