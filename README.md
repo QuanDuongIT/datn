@@ -1,4 +1,4 @@
-<!-- điều kiện triển khai trên vs code, python 3.9 -->
+<!-- điều kiện triển khai trên vs code, python 3.9, Đặt thư mục dự án ở đường dẫn không có dấu tiếng Việt -->
 0. Training
 Có thể train model bằng dataset khác theo file code training_vits.ipynb
 
